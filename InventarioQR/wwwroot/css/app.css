@@ -420,17 +420,18 @@ body {
     background: var(--color-white);
     border: 1px solid var(--color-border);
     border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow-sm);
+    padding: 14px 16px;
+    box-shadow: none;
     display: flex;
-    align-items: flex-start;
-    gap: 16px;
+    align-items: center;
+    gap: 10px;
     transition: var(--transition);
+    min-height: 76px;
 }
 
     .stat-card:hover {
-        box-shadow: var(--shadow-md);
-        transform: translateY(-1px);
+        box-shadow: none;
+        transform: none;
     }
 
 .kpi-no-hover:hover {
@@ -439,40 +440,64 @@ body {
 }
 
 .stat-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: var(--radius);
+    width: 26px;
+    height: 26px;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.25rem;
+    font-size: 1rem;
     flex-shrink: 0;
 }
 
     .stat-icon.blue {
-        background: var(--color-accent-light);
-        color: var(--color-accent);
+        background: transparent;
+        color: #111;
     }
 
     .stat-icon.green {
-        background: var(--color-success-light);
-        color: var(--color-success);
+        background: transparent;
+        color: #111;
     }
 
     .stat-icon.yellow {
-        background: var(--color-warning-light);
-        color: var(--color-warning);
+        background: transparent;
+        color: #111;
     }
 
     .stat-icon.red {
-        background: var(--color-danger-light);
-        color: var(--color-danger);
+        background: transparent;
+        color: #111;
     }
 
     .stat-icon.gray {
-        background: var(--color-border-light);
-        color: var(--color-text-secondary);
+        background: transparent;
+        color: #111;
     }
+
+.stat-card > div:not(.stat-icon) {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.stat-card .stat-value {
+    order: 2;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #111;
+    line-height: 1;
+}
+
+.stat-card .stat-label {
+    order: 1;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: #64748b;
+    margin-top: 0;
+}
 
 .stat-value {
     font-size: 1.625rem;

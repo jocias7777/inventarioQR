@@ -23,55 +23,18 @@
             justify-content: center;
         }
         .login-wrapper {
-            display: flex;
+            display: block;
             width: 100%;
-            max-width: 900px;
-            min-height: 540px;
+            max-width: 460px;
             border-radius: 2px;
             overflow: hidden;
             box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+            background: #fff;
         }
-        /* Panel izquierdo — branding */
-        .login-brand {
-            flex: 1;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 48px 40px;
-            color: #fff;
-        }
-        .login-brand .brand-icon {
-            width: 64px; height: 64px;
-            background: rgba(255,255,255,0.10);
-            border-radius: 2px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 2rem;
-            margin-bottom: 24px;
-        }
-        .login-brand h1 {
-            font-size: 1.5rem; font-weight: 700;
-            margin-bottom: 8px; letter-spacing: -0.5px;
-        }
-        .login-brand p {
-            font-size: 0.875rem; color: rgba(255,255,255,0.6);
-            text-align: center; line-height: 1.6;
-        }
-        .feature-list {
-            margin-top: 40px; width: 100%;
-            list-style: none; padding: 0;
-        }
-        .feature-list li {
-            display: flex; align-items: center; gap: 10px;
-            font-size: 0.8125rem; color: rgba(255,255,255,0.75);
-            margin-bottom: 12px;
-        }
-        .feature-list li i { color: #4cc9f0; font-size: 1rem; }
 
         /* Panel derecho — formulario */
         .login-form-panel {
-            flex: 1;
+            width: 100%;
             background: #fff;
             display: flex;
             flex-direction: column;
@@ -109,7 +72,7 @@
             color: #9ca3af;
         }
         .btn-login {
-            background: #111;
+            background: #0e7490;
             color: #fff;
             border: none;
             border-radius: 2px;
@@ -121,7 +84,7 @@
             transition: background .15s;
             margin-top: 8px;
         }
-        .btn-login:hover { background: #333; }
+        .btn-login:hover { background: #0c657d; }
         .alert-danger {
             border-radius: 2px;
             font-size: 0.875rem;
@@ -131,20 +94,12 @@
         }
 
         @@media (max-width: 700px) {
-            .login-brand { display: none; }
             .login-form-panel { padding: 40px 24px; }
         }
     </style>
 </head>
 <body>
     <div class="login-wrapper">
-        <!-- Branding -->
-        <div class="login-brand">
-           
-            <h1>InventarioQR</h1>
-            <p>Sistema empresarial de gestión de inventario en tiempo real con códigos QR.</p>
-        </div>
-
         <!-- Formulario -->
         <div class="login-form-panel">
             <h2>Iniciar sesión</h2>
