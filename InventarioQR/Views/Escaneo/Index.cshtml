@@ -1,0 +1,249 @@
+﻿@{
+    ViewData["Title"] = "Portal de Escaneo";
+    ViewData["Section"] = "Inventario";
+    Layout = "_Layout";
+}
+
+<div style="max-width:560px;margin:0 auto;">
+
+    <!-- Header portal -->
+    <div style="text-align:center;margin-bottom:32px;">
+        <div style="width:56px;height:56px;background:#111;
+                    border-radius:var(--radius);
+                    display:inline-flex;align-items:center;
+                    justify-content:center;margin-bottom:14px;">
+            <i class="bi bi-upc-scan"
+               style="font-size:1.5rem;color:#fff;"></i>
+        </div>
+        <h1 style="font-size:1.375rem;font-weight:700;margin-bottom:4px;">
+            Portal de Escaneo
+        </h1>
+        <p style="font-size:.9375rem;color:var(--color-text-secondary);">
+            Escanea un código QR o ingresa el payload manualmente
+        </p>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert-app danger" style="margin-bottom:16px;">
+            <i class="bi bi-exclamation-circle-fill"></i>
+            <span>@ViewBag.Error</span>
+        </div>
+    }
+
+    <!-- Área de escaneo con cámara -->
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+            <span class="card-title">
+                <i class="bi bi-camera me-2"></i>Escanear con cámara
+            </span>
+            <button class="btn-secondary-app"
+                    style="padding:5px 12px;font-size:.8125rem;"
+                    onclick="toggleCamara()" id="btnCamara">
+                <i class="bi bi-camera-video"></i> Activar
+            </button>
+        </div>
+        <div class="card-body" style="padding:0;">
+            <div id="camaraArea" style="display:none;">
+                <video id="video"
+                       style="width:100%;border-radius:0 0 var(--radius) var(--radius);
+                              display:block;"
+                       autoplay playsinline></video>
+                <canvas id="canvasQR" style="display:none;"></canvas>
+                <div style="padding:10px 16px;
+                            background:var(--color-border-light);
+                            font-size:.8125rem;
+                            color:var(--color-text-muted);
+                            text-align:center;">
+                    Apunta al código QR
+                    <span id="scanStatus"
+                          style="color:var(--color-accent);
+                                 font-weight:500;margin-left:8px;">
+                        Buscando...
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entrada manual -->
+    <div class="card" style="margin-bottom:16px;">
+        <div class="card-header">
+            <span class="card-title">
+                <i class="bi bi-keyboard me-2"></i>Ingreso manual
+            </span>
+        </div>
+        <div class="card-body">
+            <form asp-action="Consultar" asp-controller="Escaneo"
+                  method="post">
+                @Html.AntiForgeryToken()
+                <div style="display:flex;gap:8px;">
+                    <input type="text" name="payload"
+                           id="payloadInput"
+                           placeholder="Pega o escribe el payload del QR..."
+                           style="flex:1;padding:10px 14px;
+                                  border:1px solid var(--color-border);
+                                  border-radius:var(--radius);
+                                  font-size:.9375rem;font-family:monospace;
+                                  font-family:inherit;"
+                           autocomplete="off" autofocus />
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-search"></i> Consultar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Historial reciente (localStorage) -->
+    <div class="card" id="cardHistorial" style="display:none;">
+        <div class="card-header">
+            <span class="card-title">
+                <i class="bi bi-clock-history me-2"></i>Recientes
+            </span>
+            <button class="btn-icon" onclick="limpiarHistorial()"
+                    title="Limpiar">
+                <i class="bi bi-trash"
+                   style="font-size:.8rem;color:var(--color-danger);"></i>
+            </button>
+        </div>
+        <div id="listaHistorial" style="padding:4px 0;"></div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script>
+        let stream = null;
+        let scanning = false;
+
+        async function toggleCamara() {
+            const area = document.getElementById('camaraArea');
+            const btn  = document.getElementById('btnCamara');
+
+            if (scanning) {
+                // Detener
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                scanning = false;
+                area.style.display = 'none';
+                btn.innerHTML = '<i class="bi bi-camera-video"></i> Activar';
+                return;
+            }
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+                area.style.display = 'block';
+                btn.innerHTML =
+                    '<i class="bi bi-stop-circle" style="color:var(--color-danger);"></i> Detener';
+                scanning = true;
+                requestAnimationFrame(scanFrame);
+            } catch (e) {
+                alert('No se pudo acceder a la cámara: ' + e.message);
+            }
+        }
+
+        function scanFrame() {
+            if (!scanning) return;
+
+            const video  = document.getElementById('video');
+            const canvas = document.getElementById('canvasQR');
+
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+                requestAnimationFrame(scanFrame);
+                return;
+            }
+
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const code = jsQR(imageData.data, imageData.width, imageData.height);
+
+            if (code) {
+                document.getElementById('scanStatus').textContent = '¡Detectado!';
+                document.getElementById('scanStatus').style.color =
+                    'var(--color-success)';
+
+                // Detener cámara y enviar
+                if (stream) stream.getTracks().forEach(t => t.stop());
+                scanning = false;
+
+                // Auto submit
+                document.getElementById('payloadInput').value = code.data;
+                guardarHistorial(code.data);
+
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Escaneo/Consultar';
+                const token = document.querySelector('input[name="__RequestVerificationToken"]');
+                const inp   = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = 'payload';
+                inp.value = code.data;
+                const tok = document.createElement('input');
+                tok.type  = 'hidden';
+                tok.name  = '__RequestVerificationToken';
+                tok.value = token?.value ?? '';
+                form.appendChild(inp);
+                form.appendChild(tok);
+                document.body.appendChild(form);
+                form.submit();
+                return;
+            }
+
+            requestAnimationFrame(scanFrame);
+        }
+
+        // ── Historial en sessionStorage ──
+        function guardarHistorial(payload) {
+            const lista = JSON.parse(sessionStorage.getItem('qr_historial') || '[]');
+            if (!lista.includes(payload)) {
+                lista.unshift(payload);
+                sessionStorage.setItem('qr_historial',
+                    JSON.stringify(lista.slice(0, 5)));
+            }
+        }
+
+        function renderHistorial() {
+            const lista = JSON.parse(sessionStorage.getItem('qr_historial') || '[]');
+            const card  = document.getElementById('cardHistorial');
+            const cont  = document.getElementById('listaHistorial');
+
+            if (!lista.length) { card.style.display = 'none'; return; }
+
+            card.style.display = 'block';
+            cont.innerHTML = lista.map(p => `
+                <div style="display:flex;align-items:center;gap:10px;
+                            padding:9px 16px;border-bottom:1px solid
+                            var(--color-border-light);cursor:pointer;"
+                     onclick="document.getElementById('payloadInput').value='${p}'"
+                     onmouseenter="this.style.background='var(--color-border-light)'"
+                     onmouseleave="this.style.background=''">
+                    <i class="bi bi-qr-code-scan"
+                       style="color:var(--color-text-muted);font-size:.875rem;"></i>
+                    <span style="font-size:.8125rem;font-family:monospace;
+                                 overflow:hidden;text-overflow:ellipsis;
+                                 white-space:nowrap;flex:1;">
+                        ${p}
+                    </span>
+                    <i class="bi bi-arrow-up-left"
+                       style="color:var(--color-text-muted);font-size:.75rem;"></i>
+                </div>
+            `).join('');
+        }
+
+        function limpiarHistorial() {
+            sessionStorage.removeItem('qr_historial');
+            renderHistorial();
+        }
+
+        renderHistorial();
+    </script>
+}

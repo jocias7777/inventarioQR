@@ -1,0 +1,194 @@
+﻿@model InventarioQR.ViewModels.ProductoViewModel
+@{
+    ViewData["Title"] = "Editar Producto";
+    ViewData["Section"] = "Inventario › Productos";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Editar producto</div>
+        <div class="page-subtitle">@Model.Nombre</div>
+    </div>
+    <a href="/Productos" class="btn-secondary-app">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div style="max-width:760px;">
+    <form asp-action="Editar" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input asp-for="Id" type="hidden" />
+        <input asp-for="ImagenUrl" type="hidden" />
+
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Información básica</span></div>
+            <div class="card-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+                    <div>
+                        <label asp-for="SKU" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">SKU *</label>
+                        <input asp-for="SKU" class="form-control"
+                               style="border-radius:var(--radius);" />
+                        <span asp-validation-for="SKU"
+                              style="font-size:.75rem;color:var(--color-danger);"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="Estado" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">Estado</label>
+                        <select asp-for="Estado" class="form-select"
+                                style="border-radius:var(--radius);">
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                        </select>
+                    </div>
+
+                    <div style="grid-column:1/-1;">
+                        <label asp-for="Nombre" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">Nombre *</label>
+                        <input asp-for="Nombre" class="form-control"
+                               style="border-radius:var(--radius);" />
+                        <span asp-validation-for="Nombre"
+                              style="font-size:.75rem;color:var(--color-danger);"></span>
+                    </div>
+
+                    <div>
+                        <label asp-for="PrecioBase" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">Precio base (Q)</label>
+                        <input asp-for="PrecioBase" type="number" step="0.01"
+                               class="form-control" style="border-radius:var(--radius);" />
+                    </div>
+
+                    <div>
+                        <label asp-for="ImagenFile" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">
+                            Cambiar imagen
+                        </label>
+                        <input asp-for="ImagenFile" type="file"
+                               accept=".jpg,.jpeg,.png,.webp"
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               onchange="previewImg(this)" />
+                        @if (!string.IsNullOrEmpty(Model.ImagenUrl))
+                        {
+                            <img id="imgPreview" src="@Model.ImagenUrl"
+                                 style="margin-top:8px;height:80px;object-fit:cover;
+                                            border-radius:var(--radius);
+                                            border:1px solid var(--color-border);" />
+                        }
+                        else
+                        {
+                            <img id="imgPreview" src="#" alt=""
+                                 style="display:none;margin-top:8px;height:80px;
+                                            object-fit:cover;border-radius:var(--radius);" />
+                        }
+                    </div>
+
+                    <div style="grid-column:1/-1;">
+                        <label asp-for="Descripcion" style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:6px;">Descripción</label>
+                        <textarea asp-for="Descripcion" class="form-control" rows="3"
+                                  style="border-radius:var(--radius);resize:vertical;"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Variantes -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">Variantes</span>
+                <button type="button" class="btn-secondary-app"
+                        style="padding:5px 12px;font-size:.8125rem;"
+                        onclick="agregarVariante()">
+                    <i class="bi bi-plus"></i> Agregar
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="variantesContainer">
+                    @for (int i = 0; i < Model.Variantes.Count; i++)
+                    {
+                        <div style="display:grid;grid-template-columns:1fr 1fr auto;
+                                        gap:10px;margin-bottom:8px;align-items:end;">
+                            <div>
+                                <label style="font-size:.75rem;font-weight:500;
+                                                  display:block;margin-bottom:4px;">Color</label>
+                                <input type="text" name="Variantes[@i].Color"
+                                       value="@Model.Variantes[i].Color"
+                                       class="form-control"
+                                       style="border-radius:var(--radius);" />
+                            </div>
+                            <div>
+                                <label style="font-size:.75rem;font-weight:500;
+                                                  display:block;margin-bottom:4px;">Talla</label>
+                                <input type="text" name="Variantes[@i].Tamaño"
+                                       value="@Model.Variantes[i].Tamaño"
+                                       class="form-control"
+                                       style="border-radius:var(--radius);" />
+                            </div>
+                            <button type="button" class="btn-icon"
+                                    onclick="this.parentElement.remove()">
+                                <i class="bi bi-trash"
+                                   style="color:var(--color-danger);"></i>
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn-primary-app">
+                <i class="bi bi-check-lg"></i> Guardar cambios
+            </button>
+            <a href="/Productos" class="btn-secondary-app">Cancelar</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let varIdx = @Model.Variantes.Count;
+
+        function agregarVariante() {
+            const c = document.getElementById('variantesContainer');
+            const div = document.createElement('div');
+            div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;' +
+                                'gap:10px;margin-bottom:8px;align-items:end;';
+            div.innerHTML = `
+                <div>
+                    <label style="font-size:.75rem;font-weight:500;
+                                  display:block;margin-bottom:4px;">Color</label>
+                    <input type="text" name="Variantes[${varIdx}].Color"
+                           class="form-control" placeholder="Rojo"
+                           style="border-radius:var(--radius);"/>
+                </div>
+                <div>
+                    <label style="font-size:.75rem;font-weight:500;
+                                  display:block;margin-bottom:4px;">Talla</label>
+                    <input type="text" name="Variantes[${varIdx}].Tamaño"
+                           class="form-control" placeholder="M"
+                           style="border-radius:var(--radius);"/>
+                </div>
+                <button type="button" class="btn-icon"
+                        onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash" style="color:var(--color-danger);"></i>
+                </button>`;
+            c.appendChild(div);
+            varIdx++;
+        }
+
+        function previewImg(input) {
+            const preview = document.getElementById('imgPreview');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+    </script>
+}

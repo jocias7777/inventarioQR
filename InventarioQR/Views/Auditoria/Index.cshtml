@@ -1,0 +1,458 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.AuditoriaListaDto>
+@{
+    ViewData["Title"] = "Auditoría";
+    ViewData["Section"] = "Reportes";
+    var resumen = ViewBag.Resumen as InventarioQR.ViewModels.AuditoriaResumenDto;
+    var modulos = ViewBag.Modulos as List<string> ?? new();
+    var acciones = ViewBag.Acciones as List<string> ?? new();
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Auditoría del sistema</div>
+        <div class="page-subtitle">
+            Trazabilidad total — @Model.TotalItemCount registros
+        </div>
+    </div>
+    <a href="/Auditoria/ExportarCSV" class="btn-secondary-app">
+        <i class="bi bi-download"></i> Exportar CSV
+    </a>
+</div>
+
+<!-- Stats resumen -->
+@*
+@if (resumen != null)
+{
+    <div class="grid-4" style="margin-bottom:20px;">
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="bi bi-activity"></i>
+            </div>
+            <div>
+                <div class="stat-value">@resumen.TotalHoy</div>
+                <div class="stat-label">Acciones hoy</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="bi bi-calendar-week"></i>
+            </div>
+            <div>
+                <div class="stat-value">@resumen.TotalSemana</div>
+                <div class="stat-label">Esta semana</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">
+                <i class="bi bi-lightning"></i>
+            </div>
+            <div>
+                <div class="stat-value" style="font-size:1rem;">
+                    @resumen.AccionMasFrecuente
+                </div>
+                <div class="stat-label">Acción más frecuente</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon gray">
+                <i class="bi bi-grid"></i>
+            </div>
+            <div>
+                <div class="stat-value" style="font-size:1rem;">
+                    @resumen.ModuloMasActivo
+                </div>
+                <div class="stat-label">Módulo más activo</div>
+            </div>
+        </div>
+    </div>
+}
+*@
+ 
+
+<!-- Filtros avanzados (colapsable) -->
+<div class="card" style="margin-bottom:16px;">
+    <div class="card-header"
+         style="cursor:pointer;"
+         onclick="toggleFiltros()">
+        <span class="card-title">
+            <i class="bi bi-funnel me-2"></i>Filtros avanzados
+        </span>
+        <i class="bi bi-chevron-down" id="icoFiltros"
+           style="color:var(--color-text-muted);
+                  transition:.2s;"></i>
+    </div>
+    <div id="filtrosPanel" style="display:none;">
+        <form method="get"
+              style="padding:16px 20px;
+                     display:grid;
+                     grid-template-columns:repeat(3,1fr) auto;
+                     gap:12px;align-items:end;">
+
+            <div>
+                <label style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:5px;">
+                    Usuario
+                </label>
+                <input type="text" name="usuario"
+                       value="@ViewBag.FiltUsuario"
+                       class="form-control"
+                       style="border-radius:var(--radius);font-size:.875rem;"
+                       placeholder="Nombre o ID..." />
+            </div>
+
+            <div>
+                <label style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:5px;">
+                    Acción
+                </label>
+                <select name="accion" class="form-select"
+                        style="border-radius:var(--radius);font-size:.875rem;">
+                    <option value="">Todas</option>
+                    @foreach (var a in acciones)
+                    {
+                        <option value="@a"
+                                selected="@(ViewBag.FiltAccion == a)">
+                            @a
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:5px;">
+                    Módulo
+                </label>
+                <select name="modulo" class="form-select"
+                        style="border-radius:var(--radius);font-size:.875rem;">
+                    <option value="">Todos</option>
+                    @foreach (var m in modulos)
+                    {
+                        <option value="@m"
+                                selected="@(ViewBag.FiltModulo == m)">
+                            @m
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:5px;">
+                    Desde
+                </label>
+                <input type="date" name="fechaDesde"
+                       value="@ViewBag.FiltFechaDesde"
+                       class="form-control"
+                       style="border-radius:var(--radius);font-size:.875rem;" />
+            </div>
+
+            <div>
+                <label style="font-size:.8125rem;font-weight:500;
+                               display:block;margin-bottom:5px;">
+                    Hasta
+                </label>
+                <input type="date" name="fechaHasta"
+                       value="@ViewBag.FiltFechaHasta"
+                       class="form-control"
+                       style="border-radius:var(--radius);font-size:.875rem;" />
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:flex-end;">
+                <button type="submit" class="btn-primary-app"
+                        style="flex:1;justify-content:center;">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+                <a href="/Auditoria" class="btn-secondary-app">
+                    <i class="bi bi-x"></i>
+                </a>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<!-- Tabla -->
+<div class="card">
+    <div class="table-wrapper">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-shield-check"></i>
+                <p>Sin registros de auditoría para los filtros aplicados.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Módulo</th>
+                        <th>Detalle</th>
+                        <th>IP</th>
+                        <th>Fecha y hora</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in Model)
+                    {
+                        <tr>
+                            <td style="font-size:.75rem;
+                                               color:var(--color-text-muted);">
+                                #@log.Id
+                            </td>
+                            <td>
+                                <div style="font-size:.875rem;font-weight:500;">
+                                    @log.NombreUsuario
+                                </div>
+                            </td>
+                            <td>
+                                @{
+                                    var accionColor = log.Accion switch
+                                    {
+                                        "CREATE" => "var(--color-success)",
+                                        "UPDATE" => "var(--color-info)",
+                                        "DELETE" => "var(--color-danger)",
+                                        "LOGIN" => "var(--color-warning)",
+                                        "LOGOUT" => "var(--color-text-muted)",
+                                        _ => "var(--color-text-secondary)"
+                                    };
+                                }
+                                <span style="display:inline-flex;align-items:center;padding:4px 10px;
+                                             font-size:.75rem;font-weight:600;line-height:1;
+                                             border:1px solid @accionColor;background:@accionColor;
+                                             color:#fff;border-radius:var(--radius);">
+                                    @log.Accion
+                                </span>
+                            </td>
+                            <td>
+                                <span style="font-size:.8125rem;
+                                                     background:var(--color-border-light);
+                                                     padding:2px 8px;
+                                                     border-radius:var(--radius);">
+                                    @log.Modulo
+                                </span>
+                            </td>
+                            <td style="font-size:.8125rem;
+                                               color:var(--color-text-secondary);
+                                               max-width:220px;white-space:nowrap;
+                                               overflow:hidden;text-overflow:ellipsis;"
+                                title="@log.Detalle">
+                                @(log.Detalle ?? "—")
+                            </td>
+                            <td style="font-size:.75rem;
+                                               font-family:monospace;
+                                               color:var(--color-text-muted);">
+                                @(log.IpOrigen ?? "—")
+                            </td>
+                            <td style="font-size:.75rem;
+                                               color:var(--color-text-muted);
+                                               white-space:nowrap;">
+                                @log.FechaHora.ToString("dd/MM/yy HH:mm:ss")
+                            </td>
+                            <td>
+                                <button class="btn-icon"
+                                        title="Ver detalle"
+                                        onclick="verDetalle(@log.Id)">
+                                    <i class="bi bi-eye"
+                                       style="font-size:.8rem;"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Model.PageCount > 1)
+            {
+                <div style="display:flex;align-items:center;
+                                    justify-content:space-between;
+                                    padding:12px 16px;
+                                    border-top:1px solid var(--color-border);">
+                    <span style="font-size:.8125rem;
+                                         color:var(--color-text-muted);">
+                        Página @Model.PageNumber de @Model.PageCount
+                        — @Model.TotalItemCount registros totales
+                    </span>
+                    <div style="display:flex;gap:4px;">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a href="?pagina=@(Model.PageNumber - 1)&usuario=@ViewBag.FiltUsuario&accion=@ViewBag.FiltAccion&modulo=@ViewBag.FiltModulo&fechaDesde=@ViewBag.FiltFechaDesde&fechaHasta=@ViewBag.FiltFechaHasta"
+                               class="btn-secondary-app"
+                               style="padding:5px 10px;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        }
+                        @if (Model.HasNextPage)
+                        {
+                            <a href="?pagina=@(Model.PageNumber + 1)&usuario=@ViewBag.FiltUsuario&accion=@ViewBag.FiltAccion&modulo=@ViewBag.FiltModulo&fechaDesde=@ViewBag.FiltFechaDesde&fechaHasta=@ViewBag.FiltFechaHasta"
+                               class="btn-secondary-app"
+                               style="padding:5px 10px;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<!-- MODAL: Detalle log -->
+<div class="modal fade" id="modalDetallLog"
+     tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-shield-check me-2"
+                       style="color:var(--color-accent);"></i>
+                    Detalle de auditoría
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" style="padding:20px;">
+
+                <div style="display:flex;flex-direction:column;
+                            gap:10px;font-size:.875rem;">
+
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            ID
+                        </span>
+                        <span id="dId" style="font-family:monospace;
+                                               font-weight:500;"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            Usuario
+                        </span>
+                        <span id="dUsuario" style="font-weight:500;"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            Acción
+                        </span>
+                        <span id="dAccion"
+                              style="display:inline-flex;align-items:center;padding:4px 10px;
+                                     font-size:.75rem;font-weight:600;line-height:1;
+                                     border-radius:var(--radius);">
+                        </span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            Módulo
+                        </span>
+                        <span id="dModulo"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            IP origen
+                        </span>
+                        <span id="dIp"
+                              style="font-family:monospace;"></span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;
+                                padding-bottom:8px;
+                                border-bottom:1px solid var(--color-border-light);">
+                        <span style="color:var(--color-text-secondary);">
+                            Fecha y hora
+                        </span>
+                        <span id="dFecha"></span>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-secondary);
+                                    margin-bottom:6px;">
+                            Detalle completo
+                        </div>
+                        <div id="dDetalle"
+                             style="background:var(--color-border-light);
+                                    border-radius:var(--radius);
+                                    padding:10px 12px;
+                                    font-size:.8125rem;
+                                    line-height:1.6;
+                                    word-break:break-all;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer"
+                 style="border-top:1px solid var(--color-border);
+                        padding:12px 20px;">
+                <button type="button" class="btn-secondary-app"
+                        data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function toggleFiltros() {
+            const panel = document.getElementById('filtrosPanel');
+            const ico   = document.getElementById('icoFiltros');
+            const open  = panel.style.display !== 'none';
+            panel.style.display = open ? 'none' : 'block';
+            ico.style.transform = open ? '' : 'rotate(180deg)';
+        }
+
+        // Si hay filtros activos, mostrar el panel abierto
+        @if (ViewBag.FiltUsuario != null || ViewBag.FiltAccion != null ||
+                      ViewBag.FiltModulo != null || ViewBag.FiltFechaDesde != null)
+        {
+                <text>
+                document.getElementById('filtrosPanel').style.display = 'block';
+                document.getElementById('icoFiltros').style.transform = 'rotate(180deg)';
+                </text>
+        }
+
+        async function verDetalle(id) {
+            const res  = await fetch(`/Auditoria/Detalle/${id}`);
+            const data = await res.json();
+
+            document.getElementById('dId').textContent      = '#' + data.id;
+            document.getElementById('dUsuario').textContent = data.nombreUsuario;
+            const dAccion = document.getElementById('dAccion');
+            const accionColor = data.accion === 'CREATE' ? 'var(--color-success)'
+                : data.accion === 'UPDATE' ? 'var(--color-info)'
+                : data.accion === 'DELETE' ? 'var(--color-danger)'
+                : data.accion === 'LOGIN' ? 'var(--color-warning)'
+                : data.accion === 'LOGOUT' ? 'var(--color-text-muted)'
+                : 'var(--color-text-secondary)';
+            dAccion.textContent = data.accion;
+            dAccion.style.background = accionColor;
+            dAccion.style.border = `1px solid ${accionColor}`;
+            dAccion.style.color = '#fff';
+            document.getElementById('dModulo').textContent  = data.modulo;
+            document.getElementById('dIp').textContent      = data.ipOrigen ?? '—';
+            document.getElementById('dFecha').textContent   = data.fechaHora;
+            document.getElementById('dDetalle').textContent = data.detalle ?? '—';
+
+            new bootstrap.Modal(
+                document.getElementById('modalDetallLog')).show();
+        }
+    </script>
+}

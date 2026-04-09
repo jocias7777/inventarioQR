@@ -1,0 +1,72 @@
+@using Microsoft.AspNetCore.Identity
+@inject UserManager<InventarioQR.Models.Entities.ApplicationUser> UserManager
+
+@{
+    var title = ViewData["Title"]?.ToString() ?? "Dashboard";
+    var section = ViewData["Section"]?.ToString() ?? "";
+
+    var user = await UserManager.GetUserAsync(User);
+    var nombreUsuario = user?.NombreCompleto ?? User?.Identity?.Name ?? "Usuario";
+    var iniciales = string.Concat(nombreUsuario.Split(' ')
+        .Where(w => w.Length > 0)
+        .Take(2)
+        .Select(w => w[0]))
+        .ToUpper();
+}
+
+<header class="header" id="header">
+
+    <button class="header-toggle" onclick="toggleSidebar()" title="Colapsar menú">
+        <i class="bi bi-list" style="font-size:1.25rem;"></i>
+    </button>
+
+    <div class="header-breadcrumb">
+        @if (!string.IsNullOrEmpty(section))
+        {
+            <span>@(section)</span>
+            <i class="bi bi-chevron-right" style="font-size:.7rem;"></i>
+        }
+        <span class="current">@title</span>
+    </div>
+
+    <div class="header-actions">
+
+        <!-- Notificaciones -->
+        <details id="notifWrap" style="position:relative;">
+            <summary class="header-btn" title="Notificaciones" id="notifBtn" style="list-style:none;">
+                <i class="bi bi-bell-fill" style="color:#000;font-size:1rem;"></i>
+                <span class="notif-dot" id="notifDot" style="display:none;"></span>
+            </summary>
+            <div class="card" id="notifMenu"
+                 style="position:absolute;right:0;top:42px;width:360px;max-width:90vw;z-index:120;overflow:hidden;">
+                <div style="padding:10px 12px;border-bottom:1px solid var(--color-border);font-weight:600;font-size:.875rem;">
+                    Notificaciones
+                </div>
+                <div id="notifList" style="max-height:320px;overflow:auto;">
+                    <div style="padding:12px;color:var(--color-text-muted);font-size:.8125rem;">
+                        Cargando notificaciones...
+                    </div>
+                </div>
+            </div>
+        </details>
+
+        <!-- Usuario -->
+        <details style="position:relative;">
+            <summary class="header-btn" style="list-style:none;padding:2px;" title="Usuario">
+                <div class="user-avatar"
+                     style="background:var(--color-accent-light);color:#000;width:34px;height:34px;">
+                    <i class="bi bi-person-fill"
+                       style="font-size:1.2rem;color:#000;line-height:1;display:block;opacity:1;"></i>
+                </div>
+            </summary>
+            <div class="card"
+                 style="position:absolute;right:0;top:42px;min-width:150px;padding:6px;z-index:120;">
+                <a href="/Auth/Logout" class="btn-secondary-app"
+                   style="width:100%;justify-content:flex-start;padding:6px 10px;">
+                    <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                </a>
+            </div>
+        </details>
+
+    </div>
+</header>

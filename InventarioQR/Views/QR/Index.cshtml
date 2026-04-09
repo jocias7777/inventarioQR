@@ -1,0 +1,385 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.QRListaDto>
+@{
+    ViewData["Title"] = "Códigos QR";
+    ViewData["Section"] = "Inventario";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Códigos QR</div>
+        <div class="page-subtitle">
+            @Model.TotalItemCount QR generados
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <button class="btn-secondary-app"
+                data-bs-toggle="modal"
+                data-bs-target="#modalMasivo">
+            <i></i> Generación masiva
+        </button>
+        <button class="btn-primary-app"
+                data-bs-toggle="modal"
+                data-bs-target="#modalGenerar">
+            <i class="bi bi-plus-lg"></i> Agregar QR
+        </button>
+    </div>
+</div>
+
+<!-- Layout tabla + panel -->
+<div style="display:flex;gap:20px;align-items:flex-start;">
+
+    <!-- Tabla -->
+    <div class="card" style="flex:1;min-width:0;">
+        <div class="table-wrapper">
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-qr-code"></i>
+                    <p>Sin códigos QR generados aún.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Producto</th>
+                            <th>Ubicación</th>
+                            <th>Stock</th>
+                            <th>Generado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var qr in Model)
+                        {
+                            <tr class="qr-row" style="cursor:pointer;"
+                                onclick="verDetalleQR(@qr.Id, this)">
+                                <td style="font-size:.75rem;
+                                                   color:var(--color-text-muted);">
+                                    #@qr.Id
+                                </td>
+                                <td>
+                                    <div style="font-weight:500;font-size:.875rem;">
+                                        @qr.ProductoNombre
+                                    </div>
+                                    <div style="font-size:.75rem;font-family:monospace;
+                                                        color:var(--color-text-muted);">
+                                        @qr.ProductoSKU
+                                    </div>
+                                </td>
+                                <td style="font-size:.8125rem;
+                                                   color:var(--color-text-secondary);
+                                                   max-width:200px;white-space:nowrap;
+                                                   overflow:hidden;text-overflow:ellipsis;"
+                                    title="@qr.Ubicacion">
+                                    @qr.Ubicacion
+                                </td>
+                                <td>
+                                    <span style="font-weight:700;
+                                                color:@(qr.StockDisponible == 0
+                                                                                      ? "var(--color-danger)"
+                                                                                      : qr.StockDisponible < 10
+                                                                                          ? "var(--color-warning)"
+                                                                                          : "var(--color-success)");">
+                                @qr.StockDisponible
+                            </span>
+                        </td>
+                        <td style="font-size:.75rem;
+                                           color:var(--color-text-muted);
+                                           white-space:nowrap;">
+                            @qr.FechaGeneracion.ToString("dd/MM/yy HH:mm")
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div style="display:flex;gap:4px;">
+                                <a href="/QR/Descargar/@qr.Id"
+                                   class="btn-icon" title="Descargar PNG">
+                                    <i class="bi bi-download"
+                                       style="color:var(--color-accent);"></i>
+                                </a>
+                                <form asp-action="Eliminar" method="post"
+                                      style="display:inline;">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id"
+                                           value="@qr.Id" />
+                                    <button type="submit" class="btn-icon"
+                                            onclick="return confirmPost(this.form, '¿Eliminar QR #@qr.Id?')"
+                                            title="Eliminar">
+                                        <i class="bi bi-trash"
+                                           style="color:var(--color-danger);"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                                        }
+                    </tbody>
+                </table>
+
+                @if (Model.PageCount > 1)
+                {
+                    <div style="display:flex;align-items:center;
+                                        justify-content:space-between;
+                                        padding:12px 16px;
+                                        border-top:1px solid var(--color-border);">
+                        <span style="font-size:.8125rem;
+                                             color:var(--color-text-muted);">
+                            Página @Model.PageNumber de @Model.PageCount
+                        </span>
+                        <div style="display:flex;gap:4px;">
+                            @if (Model.HasPreviousPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber - 1)"
+                                   class="btn-secondary-app"
+                                   style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            }
+                            @if (Model.HasNextPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber + 1)"
+                                   class="btn-secondary-app"
+                                   style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <div id="panelQR" style="width:300px;flex-shrink:0;display:none;">
+        <div class="card">
+            <div style="padding:14px 16px;
+                        border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;
+                        justify-content:space-between;">
+                <span style="font-weight:600;font-size:.9375rem;">
+                    Vista previa
+                </span>
+                <button class="btn-icon" onclick="cerrarPanelQR()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="panelQRBody" style="padding:16px;"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ══════════════════════
+     MODAL: Generar QR
+     ══════════════════════ -->
+<div class="modal fade" id="modalGenerar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i></i>Generar código QR
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Generar" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Producto *
+                        </label>
+                        <select name="productoId" required
+                                class="form-select"
+                                style="border-radius:var(--radius);font-size:.875rem;">
+                            <option value="">— Selecciona —</option>
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Posición *
+                        </label>
+                        <select name="posicionId" required
+                                class="form-select"
+                                style="border-radius:var(--radius);font-size:.875rem;">
+                            <option value="">— Selecciona —</option>
+                        </select>
+                    </div>
+                    <div class="alert-app warning" style="margin-top:14px;margin-bottom:0;">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span style="font-size:.8125rem;">
+                            Solo se permite 1 QR por combinación
+                            producto + posición.
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);
+                            padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Generar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════
+     MODAL: Generar Masivo
+     ══════════════════════ -->
+<div class="modal fade" id="modalMasivo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:560px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-grid me-2"></i>Generación masiva de QR
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="GenerarMasivo" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Producto *
+                        </label>
+                        <select name="productoId" id="masivoProdId"
+                                required class="form-select"
+                                style="border-radius:var(--radius);font-size:.875rem;"
+                                onchange="cargarPosicionesMasivo()">
+                            <option value="">— Selecciona —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Posiciones (selecciona varias)
+                        </label>
+                        <div id="posicionesMasivo"
+                             style="max-height:200px;overflow-y:auto;
+                                    border:1px solid var(--color-border);
+                                    border-radius:var(--radius);padding:8px;">
+                            <div style="font-size:.8125rem;
+                                        color:var(--color-text-muted);
+                                        text-align:center;padding:16px;">
+                                Selecciona un producto primero
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);
+                            padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-qr-code"></i> Generar todos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Panel lateral ──
+        async function verDetalleQR(id, row) {
+            document.querySelectorAll('.qr-row')
+                .forEach(r => r.style.background = '');
+            row.style.background = 'var(--color-accent-light)';
+
+            document.getElementById('panelQR').style.display = 'block';
+            document.getElementById('panelQRBody').innerHTML =
+                '<div style="text-align:center;padding:32px;color:var(--color-text-muted);">' +
+                '<div class="spinner-border spinner-border-sm"></div></div>';
+
+            const res  = await fetch(`/QR/Detalle/${id}`);
+            const html = await res.text();
+            document.getElementById('panelQRBody').innerHTML = html;
+        }
+
+        function cerrarPanelQR() {
+            document.getElementById('panelQR').style.display = 'none';
+            document.querySelectorAll('.qr-row')
+                .forEach(r => r.style.background = '');
+        }
+
+        // ── Cargar opciones en modales via AJAX ──
+        async function cargarSelectsModales() {
+            const res  = await fetch('/QR/GetSelectData');
+            const data = await res.json();
+
+            // Modal generar
+            const selProd = document.querySelector('#modalGenerar select[name="productoId"]');
+            const selPos  = document.querySelector('#modalGenerar select[name="posicionId"]');
+
+            data.productos.forEach(p => {
+                selProd.add(new Option(p.texto, p.id));
+            });
+            data.posiciones.forEach(p => {
+                selPos.add(new Option(p.texto, p.id));
+            });
+
+            // Modal masivo
+            const selProdM = document.getElementById('masivoProdId');
+            data.productos.forEach(p => {
+                selProdM.add(new Option(p.texto, p.id));
+            });
+        }
+
+        async function cargarPosicionesMasivo() {
+            const prodId = document.getElementById('masivoProdId').value;
+            const cont   = document.getElementById('posicionesMasivo');
+
+            if (!prodId) {
+                cont.innerHTML = '<div style="font-size:.8125rem;color:var(--color-text-muted);text-align:center;padding:16px;">Selecciona un producto primero</div>';
+                return;
+            }
+
+            const res  = await fetch('/QR/GetSelectData');
+            const data = await res.json();
+
+            cont.innerHTML = data.posiciones.map(p => `
+                <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;
+                               cursor:pointer;border-radius:var(--radius);font-size:.8125rem;"
+                       onmouseenter="this.style.background='var(--color-border-light)'"
+                       onmouseleave="this.style.background=''">
+                    <input type="checkbox" name="posicionIds" value="${p.id}"
+                           style="border-radius:2px;"/>
+                    ${p.texto}
+                </label>
+            `).join('');
+        }
+
+        // Cargar al abrir modales
+        document.getElementById('modalGenerar')
+            ?.addEventListener('show.bs.modal', cargarSelectsModales);
+        document.getElementById('modalMasivo')
+            ?.addEventListener('show.bs.modal', cargarSelectsModales);
+    </script>
+}

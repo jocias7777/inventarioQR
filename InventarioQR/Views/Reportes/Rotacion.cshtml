@@ -1,0 +1,141 @@
+﻿@model List<InventarioQR.ViewModels.ReporteRotacionDto>
+@{
+    ViewData["Title"] = "Rotación de Inventario";
+    ViewData["Section"] = "Reportes";
+    int dias = ViewBag.Dias ?? 30;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Rotación de Inventario</div>
+        <div class="page-subtitle">
+            Últimos @dias días — @Model.Count productos
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;">
+        <a href="/Reportes" class="btn-secondary-app">
+            <i class="bi bi-arrow-left"></i> Reportes
+        </a>
+        @foreach (var d in new[] { 7, 15, 30, 60, 90 })
+        {
+            <a href="/Reportes/Rotacion?dias=@d"
+               class="btn-secondary-app"
+               style="padding:6px 10px;font-size:.8125rem;
+                   @(dias == d ? "background:var(--color-text-primary);color:#fff;border-color:var(--color-text-primary);" : "")">
+                @d d
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Leyenda -->
+<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:2px;
+                    background:var(--color-success);"></div>
+        Alta rotación (≥70%)
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:2px;
+                    background:var(--color-warning);"></div>
+        Media (30-69%)
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:2px;
+                    background:var(--color-danger);"></div>
+        Baja (&lt;30%)
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-wrapper">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-arrow-repeat"></i>
+                <p>Sin movimientos en el período seleccionado.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Producto</th>
+                        <th>Entradas</th>
+                        <th>Salidas</th>
+                        <th>Stock actual</th>
+                        <th>Índice rotación</th>
+                        <th>Categoría</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Count; i++)
+                    {
+                        var r = Model[i];
+                        <tr>
+                            <td style="color:var(--color-text-muted);
+                                               font-size:.8125rem;">
+                                @(i + 1)
+                            </td>
+                            <td>
+                                <div style="font-weight:500;font-size:.875rem;">
+                                    @r.Nombre
+                                </div>
+                                <div style="font-size:.75rem;font-family:monospace;
+                                                    color:var(--color-text-muted);">
+                                    @r.SKU
+                                </div>
+                            </td>
+                            <td style="color:var(--color-success);font-weight:500;">
+                                @r.TotalEntradas
+                            </td>
+                            <td style="color:var(--color-danger);font-weight:500;">
+                                @r.TotalSalidas
+                            </td>
+                            <td style="font-weight:600;">@r.StockActual</td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <div style="flex:1;height:6px;
+                                                        background:var(--color-border);
+                                                        border-radius:10px;overflow:hidden;">
+                                        <div style="height:100%;
+                                                    width:@(Math.Min((double)r.IndiceRotacion, 100))%;
+                                                    background:@(r.Categoria == "Alta"
+                                                                                             ? "var(--color-success)"
+                                                                                             : r.Categoria == "Media"
+                                                                                                 ? "var(--color-warning)"
+                                                                                                 : "var(--color-danger)");
+                                            border-radius:10px;
+                                            transition:.3s;">
+                                </div>
+                            </div>
+                            <span style="font-weight:700;font-size:.875rem;
+                                        color:@(r.Categoria == "Alta"
+                                                                              ? "var(--color-success)"
+                                                                              : r.Categoria == "Media"
+                                                                                  ? "var(--color-warning)"
+                                                                                  : "var(--color-danger)");">
+                                @r.IndiceRotacion%
+                            </span>
+                        </div>
+                    </td>
+                    <td>
+                        @{
+                                    var (rbc, rtxt) = r.Categoria switch
+                                    {
+                                        "Alta" => ("badge-activo", "Alta"),
+                                        "Media" => ("badge-alerta", "Media"),
+                                        _ => ("badge-critico", "Baja")
+                                    };
+                                }
+                                <span class="badge-status @rbc">@rtxt</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

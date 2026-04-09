@@ -1,0 +1,526 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.ReservaListaDto>
+@{
+    ViewData["Title"] = "Reservas";
+    ViewData["Section"] = "Operaciones";
+    var resumen = ViewBag.Resumen as InventarioQR.ViewModels.ReservaResumenDto;
+    var form = ViewBag.Form as InventarioQR.ViewModels.ReservaCrearViewModel;
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Reservas</div>
+        <div class="page-subtitle">
+            Separación de inventario — @Model.TotalItemCount registros
+        </div>
+    </div>
+    <button class="btn-primary-app"
+            data-bs-toggle="modal"
+            data-bs-target="#modalCrearReserva">
+        <i class="bi bi-plus-lg"></i> Agregar reserva
+    </button>
+</div>
+
+<!-- Stats -->
+@if (resumen != null)
+{
+    <div class="grid-4" style="margin-bottom:20px;">
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon yellow">
+                <i class="bi bi-bookmark-check"></i>
+            </div>
+            <div>
+                <div class="stat-value">@resumen.TotalActivas</div>
+                <div class="stat-label">Activas</div>
+            </div>
+        </div>
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon blue">
+                <i class="bi bi-box-seam"></i>
+            </div>
+            <div>
+                <div class="stat-value">
+                    @resumen.UnidadesReservadas.ToString("N0")
+                </div>
+                <div class="stat-label">Unidades reservadas</div>
+            </div>
+        </div>
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon green">
+                <i class="bi bi-check-circle"></i>
+            </div>
+            <div>
+                <div class="stat-value">@resumen.TotalCompletadas</div>
+                <div class="stat-label">Completadas</div>
+            </div>
+        </div>
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon red">
+                <i class="bi bi-clock-history"></i>
+            </div>
+            <div>
+                <div class="stat-value">@resumen.TotalExpiradas</div>
+                <div class="stat-label">Expiradas</div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Filtros -->
+<div style="margin-bottom:16px;">
+    <form method="get"
+          style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+
+            <div style="display:flex;gap:6px;">
+                @{
+                    var estados = new[]
+                    {
+                                ("", "Todas"),
+                                ("Activa", "Activas"),
+                                ("Expirada", "Expiradas"),
+                                ("Completada", "Completadas")
+                                };
+                }
+                @foreach (var (val, lbl) in estados)
+                {
+                    var isA = (ViewBag.Estado as string ?? "") == val;
+                    <a href="?estado=@val&busqueda=@ViewBag.Busqueda"
+                       class="btn-secondary-app"
+                       style="font-size:.8125rem;padding:6px 12px;
+                           text-decoration:none;
+                           @(isA ? "background:#0e7490;color:#fff;border-color:#0e7490;" : "")">
+                        @lbl
+                    </a>
+                }
+            </div>
+
+            <div style="position:relative;flex:1;min-width:180px;">
+                <i class="bi bi-search"
+                   style="position:absolute;left:10px;top:50%;
+                          transform:translateY(-50%);
+                          color:var(--color-text-muted);
+                          font-size:.8125rem;"></i>
+                <input type="text" name="busqueda"
+                       value="@ViewBag.Busqueda"
+                       placeholder="Buscar producto o referencia..."
+                       style="width:100%;padding:8px 12px 8px 30px;
+                              border:1px solid var(--color-border);
+                              border-radius:var(--radius);
+                              font-size:.875rem;font-family:inherit;" />
+            </div>
+            <button type="submit" class="btn-secondary-app">
+                <i class="bi bi-funnel"></i> Filtrar
+            </button>
+    </form>
+</div>
+
+<!-- Tabla + panel -->
+<div style="display:flex;gap:20px;align-items:flex-start;">
+
+    <div class="card" style="flex:1;min-width:0;">
+        <div class="table-wrapper">
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-bookmark"></i>
+                    <p>Sin reservas para mostrar.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Producto</th>
+                            <th>Ubicación</th>
+                            <th>Cant.</th>
+                            <th>Estado</th>
+                            <th>Referencia</th>
+                            <th>Expira</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model)
+                        {
+                            var vencida = r.EstaVencida;
+                            <tr class="res-row" style="cursor:pointer;"
+                                onclick="verDetalleReserva(@r.Id, this)">
+                                <td style="font-size:.75rem;
+                                                   color:var(--color-text-muted);">
+                                    #@r.Id
+                                </td>
+                                <td>
+                                    <div style="font-weight:500;
+                                                        font-size:.875rem;">
+                                        @r.ProductoNombre
+                                    </div>
+                                    <div style="font-size:.75rem;
+                                                        font-family:monospace;
+                                                        color:var(--color-text-muted);">
+                                        @r.ProductoSKU
+                                    </div>
+                                </td>
+                                <td style="font-size:.8125rem;
+                                                   color:var(--color-text-secondary);
+                                                   max-width:160px;white-space:nowrap;
+                                                   overflow:hidden;
+                                                   text-overflow:ellipsis;"
+                                    title="@r.Ubicacion">
+                                    @r.Ubicacion
+                                </td>
+                                <td style="font-weight:700;">@r.Cantidad</td>
+                                <td>
+                                    @{
+                                        var (bc, label) = (r.Estado, vencida) switch
+                                        {
+                                            ("Activa", false) =>
+                                            ("badge-activa-solid", "Activa"),
+                                            ("Activa", true) =>
+                                            ("badge-vencida-solid", "Vencida"),
+                                            ("Expirada", _) =>
+                                            ("badge-cancelada-solid", "Cancelada"),
+                                            ("Completada", _) =>
+                                            ("badge-completada-solid", "Completada"),
+                                            _ => ("badge-alerta", r.Estado)
+                                        };
+                                    }
+                                    <span class="badge-status @bc">@label</span>
+                                </td>
+                                <td style="font-size:.8125rem;
+                                                   color:var(--color-text-secondary);
+                                                   max-width:120px;white-space:nowrap;
+                                                   overflow:hidden;
+                                                   text-overflow:ellipsis;">
+                                    @(r.Referencia ?? "—")
+                                </td>
+                                <td style="font-size:.75rem;white-space:nowrap;">
+                                    @if (r.Estado == "Activa" && !vencida)
+                                    {
+                                        var mins = (int)r.TiempoRestante.TotalMinutes;
+                                        var hrs = (int)r.TiempoRestante.TotalHours;
+                                        <span style="color:@(hrs < 2
+                                                                                          ? "var(--color-danger)"
+                                                                                          : "var(--color-text-secondary)");">
+                                            @(hrs > 24
+                                                                            ? r.FechaExpiracion.ToString("dd/MM HH:mm")
+                                                                            : hrs > 0
+                                                                            ? $"{hrs}h {mins % 60}m"
+                                                                            : $"{mins}m")
+                            </span>
+                                                        }
+                                    else
+                                    {
+                                        <span style="color:var(--color-text-muted);">
+                                            @r.FechaExpiracion.ToString("dd/MM HH:mm")
+                                        </span>
+                                    }
+                                </td>
+                                <td onclick="event.stopPropagation()">
+                                    <div style="display:flex;gap:4px;">
+                                        @if (r.Estado == "Activa")
+                                        {
+                                            @if (User.IsInRole("Administrador") ||
+                                                                            User.IsInRole("Bodega"))
+                                            {
+                                                <form asp-action="Completar"
+                                                      method="post"
+                                                      style="display:inline;">
+                                                    @Html.AntiForgeryToken()
+                                                    <input type="hidden" name="id"
+                                                           value="@r.Id" />
+                                                    <button type="submit"
+                                                            class="btn-icon"
+                                                            title="Completar"
+                                                            onclick="return confirmPost(this.form, '¿Completar reserva #@r.Id?')">
+                                                        <i class="bi bi-check-circle"
+                                                           style="color:var(--color-success);">
+                                                        </i>
+                                                    </button>
+                                                </form>
+                                            }
+                                            <form asp-action="Cancelar"
+                                                  method="post"
+                                                  style="display:inline;">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id"
+                                                       value="@r.Id" />
+                                                <button type="submit"
+                                                        class="btn-icon"
+                                                        title="Cancelar"
+                                                        onclick="return confirmPost(this.form, '¿Cancelar reserva #@r.Id?')">
+                                                    <i class="bi bi-x-circle"
+                                                       style="color:var(--color-danger);">
+                                                    </i>
+                                                </button>
+                                            </form>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Model.PageCount > 1)
+                {
+                    <div style="display:flex;align-items:center;
+                                        justify-content:space-between;
+                                        padding:12px 16px;
+                                        border-top:1px solid var(--color-border);">
+                        <span style="font-size:.8125rem;
+                                             color:var(--color-text-muted);">
+                            Página @Model.PageNumber de @Model.PageCount
+                        </span>
+                        <div style="display:flex;gap:4px;">
+                            @if (Model.HasPreviousPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber - 1)&estado=@ViewBag.Estado&busqueda=@ViewBag.Busqueda"
+                                   class="btn-secondary-app"
+                                   style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            }
+                            @if (Model.HasNextPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber + 1)&estado=@ViewBag.Estado&busqueda=@ViewBag.Busqueda"
+                                   class="btn-secondary-app"
+                                   style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <div id="panelReserva"
+         style="width:300px;flex-shrink:0;display:none;">
+        <div class="card">
+            <div style="padding:14px 16px;
+                        border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;
+                        justify-content:space-between;">
+                <span style="font-weight:600;font-size:.9375rem;">
+                    Detalle reserva
+                </span>
+                <button class="btn-icon" onclick="cerrarPanel()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="panelBody" style="padding:16px;"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ════════════════════════
+     MODAL: Crear Reserva
+     ════════════════════════ -->
+<div class="modal fade" id="modalCrearReserva"
+     tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:500px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i 
+                       style="color:var(--color-warning);"></i>
+                    Nueva reserva
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Crear" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding:20px;">
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Producto *
+                        </label>
+                        <select name="ProductoId" required
+                                id="resProductoId"
+                                class="form-select"
+                                style="border-radius:var(--radius);
+                                       font-size:.875rem;"
+                                onchange="actualizarStock()">
+                            <option value="">— Selecciona —</option>
+                            @if (form != null)
+                            {
+                                @foreach (var p in form.Productos)
+                                {
+                                    <option value="@p.Id">@p.Texto</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Posición *
+                        </label>
+                        <select name="PosicionId" required
+                                id="resPosicionId"
+                                class="form-select"
+                                style="border-radius:var(--radius);
+                                       font-size:.875rem;"
+                                onchange="actualizarStock()">
+                            <option value="">— Selecciona —</option>
+                            @if (form != null)
+                            {
+                                @foreach (var p in form.Posiciones)
+                                {
+                                    <option value="@p.Id">@p.Texto</option>
+                                }
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Stock disponible en tiempo real -->
+                    <div id="stockInfo"
+                         style="display:none;background:var(--color-border-light);
+                                border-radius:var(--radius);padding:10px 14px;
+                                margin-bottom:12px;font-size:.875rem;">
+                        <div style="display:flex;
+                                    justify-content:space-between;">
+                            <span style="color:var(--color-text-secondary);">
+                                Disponible en ubicación
+                            </span>
+                            <span id="stockDisponible"
+                                  style="font-weight:700;
+                                         color:var(--color-success);">
+                                —
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;
+                                grid-template-columns:1fr 1fr;
+                                gap:12px;margin-bottom:12px;">
+                        <div>
+                            <label class="form-label"
+                                   style="font-size:.8125rem;font-weight:500;">
+                                Cantidad *
+                            </label>
+                            <input type="number" name="Cantidad"
+                                   id="resCantidad"
+                                   min="1" required
+                                   class="form-control"
+                                   style="border-radius:var(--radius);
+                                          font-size:1.125rem;
+                                          font-weight:700;
+                                          text-align:center;"
+                                   placeholder="0" />
+                        </div>
+                        <div>
+                            <label class="form-label"
+                                   style="font-size:.8125rem;font-weight:500;">
+                                Expira en (horas)
+                            </label>
+                            <select name="HorasExpiracion"
+                                    class="form-select"
+                                    style="border-radius:var(--radius);
+                                           font-size:.875rem;">
+                                <option value="4">4 horas</option>
+                                <option value="8">8 horas</option>
+                                <option value="24" selected>24 horas</option>
+                                <option value="48">48 horas</option>
+                                <option value="72">72 horas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Referencia / Motivo
+                        </label>
+                        <input type="text" name="Referencia"
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Orden #1234, cliente XYZ" />
+                    </div>
+
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);
+                            padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i>
+                        Crear reserva
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        async function verDetalleReserva(id, row) {
+            document.querySelectorAll('.res-row')
+                .forEach(r => r.style.background = '');
+            row.style.background = 'var(--color-accent-light)';
+
+            document.getElementById('panelReserva').style.display = 'block';
+            document.getElementById('panelBody').innerHTML =
+                '<div style="text-align:center;padding:32px;' +
+                'color:var(--color-text-muted);">' +
+                '<div class="spinner-border spinner-border-sm"></div></div>';
+
+            const res  = await fetch(`/Reservas/Detalle/${id}`);
+            const html = await res.text();
+            document.getElementById('panelBody').innerHTML = html;
+        }
+
+        function cerrarPanel() {
+            document.getElementById('panelReserva').style.display = 'none';
+            document.querySelectorAll('.res-row')
+                .forEach(r => r.style.background = '');
+        }
+
+        let stockTimer;
+        async function actualizarStock() {
+            clearTimeout(stockTimer);
+            const pId = document.getElementById('resProductoId').value;
+            const pos = document.getElementById('resPosicionId').value;
+            const inf = document.getElementById('stockInfo');
+
+            if (!pId || !pos) { inf.style.display = 'none'; return; }
+
+            stockTimer = setTimeout(async () => {
+                const res  = await fetch(
+                    `/Reservas/GetStock?productoId=${pId}&posicionId=${pos}`);
+                const data = await res.json();
+                const disp = data.disponible ?? 0;
+
+                document.getElementById('stockDisponible').textContent =
+                    `${disp} uds`;
+                document.getElementById('stockDisponible').style.color =
+                    disp === 0
+                        ? 'var(--color-danger)'
+                        : disp < 5
+                            ? 'var(--color-warning)'
+                            : 'var(--color-success)';
+
+                document.getElementById('resCantidad').max = disp;
+                inf.style.display = 'block';
+            }, 300);
+        }
+    </script>
+}

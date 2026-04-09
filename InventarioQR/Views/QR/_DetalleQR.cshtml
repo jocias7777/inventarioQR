@@ -1,0 +1,67 @@
+﻿@model InventarioQR.ViewModels.QRDetalleDto
+
+<!-- Imagen QR centrada -->
+<div style="text-align:center;margin-bottom:16px;">
+    <img src="data:image/png;base64,@Model.QRImagenBase64"
+         alt="QR @Model.ProductoSKU"
+         style="width:180px;height:180px;
+                border:1px solid var(--color-border);
+                border-radius:var(--radius);
+                padding:8px;background:#fff;" />
+</div>
+
+<!-- Info producto -->
+<div style="text-align:center;margin-bottom:14px;">
+    <div style="font-weight:700;font-size:.9375rem;">@Model.ProductoNombre</div>
+    <div style="font-family:monospace;font-size:.8125rem;
+                color:var(--color-text-muted);">
+        @Model.ProductoSKU
+    </div>
+</div>
+
+<!-- Ubicación -->
+<div style="background:var(--color-border-light);
+            border-radius:var(--radius);padding:10px 12px;
+            margin-bottom:14px;font-size:.8125rem;
+            text-align:center;line-height:1.6;
+            color:var(--color-text-secondary);">
+    <i class="bi bi-geo-alt me-1"
+       style="color:var(--color-accent);"></i>
+    @Model.Ubicacion
+</div>
+
+<!-- Payload (solo ID por seguridad) -->
+<div style="margin-bottom:14px;">
+    <div style="font-size:.6875rem;font-weight:600;
+                text-transform:uppercase;letter-spacing:.08em;
+                color:var(--color-text-muted);margin-bottom:4px;">
+        Payload
+    </div>
+    <div style="font-family:monospace;font-size:.6875rem;
+                background:var(--color-border-light);
+                padding:6px 8px;border-radius:var(--radius);
+                word-break:break-all;
+                color:var(--color-text-secondary);">
+        @Model.Payload
+    </div>
+</div>
+
+<div style="font-size:.75rem;color:var(--color-text-muted);
+            text-align:center;margin-bottom:14px;">
+    Generado: @Model.FechaGeneracion.ToString("dd/MM/yyyy HH:mm")
+</div>
+
+<!-- Acciones -->
+<div style="display:flex;flex-direction:column;gap:8px;">
+    <a href="/QR/Descargar/@Model.Id"
+       class="btn-primary-app"
+       style="justify-content:center;width:100%;">
+        <i class="bi bi-download"></i> Descargar PNG
+    </a>
+    <a href="/Escaneo/Ver?p=@Uri.EscapeDataString(Model.Payload)"
+       target="_blank"
+       class="btn-secondary-app"
+       style="justify-content:center;width:100%;">
+        <i class="bi bi-eye"></i> Vista portal
+    </a>
+</div>

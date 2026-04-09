@@ -1,0 +1,310 @@
+﻿@model InventarioQR.ViewModels.DashboardViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["Section"] = "";
+
+    var movimientosHoy = Model.MovimientosRecientes.Count(m => m.FechaHora.Date == DateTime.Today);
+    var alertasCriticasCount = Model.AlertasCriticas.Count(a => a.Nivel == "critico");
+}
+
+<style>
+    .dash-wrap { display:flex; flex-direction:column; gap:14px; }
+    .dash-main { display:grid; grid-template-columns:1.75fr .95fr; gap:14px; align-items:start; }
+    .dash-col { display:flex; flex-direction:column; gap:14px; min-width:0; }
+    .dash-kpi .stat-card { padding:14px 16px; }
+    .dash-kpi .stat-value { font-size:1.9rem; line-height:1; }
+    .dash-kpi .stat-icon { width:36px; height:36px; font-size:1rem; }
+    .dash-card-header { padding:10px 14px; }
+    .dash-card-body { padding:10px 14px; }
+    .dash-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .dash-action-btn { height:70px; justify-content:center; flex-direction:column; gap:4px; }
+    .dash-mini-list { display:flex; flex-direction:column; gap:8px; }
+    .dash-mini-item { border:1px solid var(--color-border-light); border-radius:var(--radius); padding:10px; }
+    .dash-table-compact th { padding-top: 7px; padding-bottom: 7px; }
+    .dash-table-compact td { padding-top: 8px; padding-bottom: 8px; }
+    .dash-badge-clean::before { display:none !important; }
+
+    @@media (max-width: 1200px) {
+        .dash-main { grid-template-columns:1fr; }
+    }
+</style>
+
+<div class="dash-wrap">
+
+    <!-- KPIs -->
+    <div class="grid-4 dash-kpi">
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon green"><i class="bi bi-box-seam"></i></div>
+            <div>
+                <div class="stat-value">@Model.TotalUnidadesDisponibles.ToString("N0")</div>
+                <div class="stat-label">Unidades disponibles</div>
+            </div>
+        </div>
+
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon blue"><i class="bi bi-bar-chart-line"></i></div>
+            <div>
+                <div class="stat-value">@movimientosHoy</div>
+                <div class="stat-label">Movimientos hoy</div>
+            </div>
+        </div>
+
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <div class="stat-value">@alertasCriticasCount</div>
+                <div class="stat-label">Alertas críticas</div>
+            </div>
+        </div>
+
+        <div class="stat-card kpi-no-hover">
+            <div class="stat-icon gray"><i class="bi bi-bookmark"></i></div>
+            <div>
+                <div class="stat-value">@Model.TotalReservasActivas</div>
+                <div class="stat-label">Reservas activas</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dash-main">
+
+        <!-- Columna principal -->
+        <div class="dash-col">
+            <div class="card">
+                <div class="card-header dash-card-header">
+                    <span class="card-title">Tendencia de movimientos (7 días)</span>
+                </div>
+                <div class="card-body dash-card-body">
+                    <canvas id="chartMovimientos" height="90"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header dash-card-header">
+                    <span class="card-title">Movimientos recientes</span>
+                    <a href="/Movimientos" class="btn-secondary-app" style="padding:5px 12px;font-size:.8125rem;">
+                        Ver todos <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+                <div class="table-wrapper">
+                    @if (!Model.MovimientosRecientes.Any())
+                    {
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>Sin movimientos aún</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table dash-table-compact">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Producto</th>
+                                    <th>Usuario</th>
+                                    <th>Cant.</th>
+                                    <th>Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in Model.MovimientosRecientes.Take(8))
+                                {
+                                    <tr>
+                                        <td>
+                                            @{
+                                                var badgeCls = m.Tipo switch
+                                                {
+                                                    "Entrada" => "badge-activo",
+                                                    "Salida" => "badge-critico",
+                                                    "Transferencia" => "badge-transito",
+                                                    _ => "badge-alerta"
+                                                };
+                                            }
+                                            <span class="badge-status @badgeCls dash-badge-clean">
+                                                @m.Tipo
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style="font-weight:500;">@m.ProductoNombre</div>
+                                            <div style="font-size:.75rem;color:var(--color-text-muted);">@m.ProductoSKU</div>
+                                        </td>
+                                        <td style="color:var(--color-text-secondary);font-size:.8125rem;">@m.NombreUsuario</td>
+                                        <td style="font-weight:700;">@m.Cantidad</td>
+                                        <td style="color:var(--color-text-muted);font-size:.75rem;white-space:nowrap;">
+                                            @m.FechaHora.ToString("HH:mm")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Columna lateral -->
+        <div class="dash-col">
+            <div class="card">
+                <div class="card-header dash-card-header">
+                    <span class="card-title">Acciones rápidas</span>
+                </div>
+                <div class="card-body" style="padding:10px;">
+                    <div class="dash-actions">
+                        <a href="/Movimientos" class="btn-secondary-app dash-action-btn">
+                            <i class="bi bi-plus-lg" style="font-size:1rem;"></i>
+                            <span style="font-size:.8125rem;">Nuevo movimiento</span>
+                        </a>
+                        <a href="/Productos" class="btn-secondary-app dash-action-btn">
+                            <i class="bi bi-box-seam" style="font-size:1rem;"></i>
+                            <span style="font-size:.8125rem;">Agregar producto</span>
+                        </a>
+                        <a href="/Escaneo" class="btn-secondary-app dash-action-btn">
+                            <i class="bi bi-qr-code-scan" style="font-size:1rem;"></i>
+                            <span style="font-size:.8125rem;">Escanear QR</span>
+                        </a>
+                        <a href="/Reportes" class="btn-secondary-app dash-action-btn">
+                            <i class="bi bi-bar-chart" style="font-size:1rem;"></i>
+                            <span style="font-size:.8125rem;">Ver reportes</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header dash-card-header">
+                    <span class="card-title"> Alertas críticas</span>
+                </div>
+                <div class="card-body" style="padding:10px;">
+                    @if (!Model.AlertasCriticas.Any())
+                    {
+                        <div class="empty-state" style="padding:20px 12px;">
+                            <i class="bi bi-shield-check" style="color:var(--color-success);"></i>
+                            <p>Sin alertas críticas</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="dash-mini-list">
+                            @foreach (var a in Model.AlertasCriticas.Take(3))
+                            {
+                                <div class="dash-mini-item">
+                                    <div style="font-weight:600;font-size:.875rem;line-height:1.2;">@a.ProductoNombre</div>
+                                    <div style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:8px;">@a.SKU</div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                        <div>
+                                            <span class="badge-status @(a.Nivel == "critico" ? "badge-critico" : "badge-alerta") dash-badge-clean">
+                                                @(a.Nivel == "critico" ? "Sin stock" : "Stock bajo")
+                                            </span>
+                                            <div style="font-size:.8125rem;font-weight:700;margin-top:4px;color:@(a.Nivel == "critico" ? "var(--color-danger)" : "var(--color-warning)");">
+                                                @a.StockTotal unid.
+                                            </div>
+                                        </div>
+                                        <a href="/Inventario" class="btn-secondary-app" style="padding:5px 10px;font-size:.8125rem;">
+                                            Reabastecer
+                                        </a>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header dash-card-header">
+                    <span class="card-title">Actividad — últimos 7 días</span>
+                </div>
+                <div class="card-body" style="padding:10px;display:flex;flex-direction:column;gap:8px;">
+                    @if (!Model.MovimientosRecientes.Any())
+                    {
+                        <div style="font-size:.8125rem;color:var(--color-text-muted);">Sin actividad reciente</div>
+                    }
+                    else
+                    {
+                        @foreach (var m in Model.MovimientosRecientes.Take(5))
+                        {
+                            var badge = m.Tipo == "Entrada"
+                                ? "badge-activo"
+                                : m.Tipo == "Salida"
+                                    ? "badge-critico"
+                                    : m.Tipo == "Transferencia"
+                                        ? "badge-transito"
+                                        : "badge-alerta";
+
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                                <div style="display:flex;align-items:center;gap:6px;min-width:0;">
+                                    <span class="badge-status @badge dash-badge-clean" style="font-size:.6875rem;padding:2px 8px;">@m.Tipo</span>
+                                    <span style="font-size:.8125rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;">
+                                        @m.ProductoNombre
+                                    </span>
+                                </div>
+                                <span style="font-size:.75rem;color:var(--color-text-muted);white-space:nowrap;">
+                                    @m.FechaHora.ToString("dd/MM HH:mm")
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            const labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.MovimientosPorDia.Select(d => d.Dia)));
+            const entradas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.MovimientosPorDia.Select(d => d.Entradas)));
+            const salidas = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                Model.MovimientosPorDia.Select(d => d.Salidas)));
+
+            new Chart(document.getElementById('chartMovimientos'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Entradas',
+                            data: entradas,
+                            borderColor: '#16a34a',
+                            backgroundColor: 'rgba(22,163,74,0.08)',
+                            pointRadius: 3,
+                            tension: 0.35,
+                            fill: true
+                        },
+                        {
+                            label: 'Salidas',
+                            data: salidas,
+                            borderColor: '#dc2626',
+                            backgroundColor: 'rgba(220,38,38,0.06)',
+                            pointRadius: 3,
+                            tension: 0.35,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 },
+                            grid: { color: 'rgba(0,0,0,0.04)' }
+                        }
+                    }
+                }
+            });
+        })();
+    </script>
+}

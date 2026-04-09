@@ -1,0 +1,98 @@
+﻿@model InventarioQR.ViewModels.InventarioDetalleDto
+
+<div style="font-weight:700;font-size:1rem;margin-bottom:2px;">
+    @Model.ProductoNombre
+</div>
+<div style="font-family:monospace;font-size:.8125rem;
+            color:var(--color-text-muted);margin-bottom:12px;">
+    @Model.ProductoSKU
+</div>
+
+<div style="font-size:.75rem;color:var(--color-text-muted);
+            margin-bottom:8px;font-weight:500;">
+    UBICACIÓN
+</div>
+<div style="background:var(--color-border-light);border-radius:var(--radius);
+            padding:8px 10px;font-size:.8125rem;margin-bottom:14px;
+            line-height:1.6;">
+    @Model.Ubicacion
+</div>
+
+<!-- Cantidades -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;">
+    <div style="background:var(--color-success-light);border-radius:var(--radius);
+                padding:10px;text-align:center;">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--color-success);">
+            @Model.CantidadDisponible
+        </div>
+        <div style="font-size:.6875rem;color:var(--color-success);">Disponible</div>
+    </div>
+    <div style="background:var(--color-warning-light);border-radius:var(--radius);
+                padding:10px;text-align:center;">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--color-warning);">
+            @Model.CantidadReservada
+        </div>
+        <div style="font-size:.6875rem;color:var(--color-warning);">Reservado</div>
+    </div>
+    <div style="background:var(--color-danger-light);border-radius:var(--radius);
+                padding:10px;text-align:center;">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--color-danger);">
+            @Model.CantidadDañada
+        </div>
+        <div style="font-size:.6875rem;color:var(--color-danger);">Dañado</div>
+    </div>
+    <div style="background:var(--color-border-light);border-radius:var(--radius);
+                padding:10px;text-align:center;">
+        <div style="font-size:1.25rem;font-weight:700;color:var(--color-text-secondary);">
+            @Model.CantidadEnTransito
+        </div>
+        <div style="font-size:.6875rem;color:var(--color-text-secondary);">En tránsito</div>
+    </div>
+</div>
+
+<div style="font-size:.75rem;color:var(--color-text-muted);margin-bottom:2px;">
+    Actualizado: @Model.UltimaActualizacion.ToString("dd/MM/yyyy HH:mm")
+</div>
+
+<!-- Últimos movimientos -->
+@if (Model.UltimosMovimientos.Any())
+{
+    <div style="margin-top:14px;">
+        <div style="font-size:.75rem;font-weight:600;text-transform:uppercase;
+                        letter-spacing:.08em;color:var(--color-text-muted);margin-bottom:8px;">
+            Últimos movimientos
+        </div>
+        @foreach (var m in Model.UltimosMovimientos)
+        {
+            <div style="display:flex;align-items:center;justify-content:space-between;
+                                padding:7px 0;border-bottom:1px solid var(--color-border-light);
+                                font-size:.8125rem;">
+                <div>
+                    @{
+                        var color = m.Tipo switch
+                        {
+                            "Entrada" => "var(--color-success)",
+                            "Salida" => "var(--color-danger)",
+                            "Transferencia" => "var(--color-info)",
+                            _ => "var(--color-warning)"
+                        };
+                    }
+                    <span style="color:@color;font-weight:500;">@m.Tipo</span>
+                    <span style="color:var(--color-text-muted);
+                                         font-size:.75rem;margin-left:4px;">
+                        @m.FechaHora.ToString("dd/MM HH:mm")
+                    </span>
+                </div>
+                <span style="font-weight:700;">@m.Cantidad uds</span>
+            </div>
+        }
+    </div>
+}
+
+<!-- Acción rápida -->
+<div style="margin-top:14px;">
+    <a href="/Movimientos/Registrar?productoId=@Model.ProductoId"
+       class="btn-primary-app" style="width:100%;justify-content:center;">
+        <i class="bi bi-plus-lg"></i> Registrar movimiento
+    </a>
+</div>

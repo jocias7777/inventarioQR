@@ -1,0 +1,162 @@
+﻿@model List<InventarioQR.ViewModels.ReporteStockBajoDto>
+@{
+    ViewData["Title"] = "Reporte Stock Bajo";
+    ViewData["Section"] = "Reportes";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Stock Bajo</div>
+        <div class="page-subtitle">
+            @Model.Count producto(s) requieren atención
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <a href="/Reportes" class="btn-secondary-app">
+            <i class="bi bi-arrow-left"></i> Reportes
+        </a>
+        @if (User.IsInRole("Administrador"))
+        {
+            <a href="/Reportes/ExportarStockBajo"
+               class="btn-primary-app">
+                <i class="bi bi-file-earmark-excel"></i> Excel
+            </a>
+        }
+    </div>
+</div>
+
+<!-- Leyenda -->
+<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;
+                font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:50%;
+                    background:var(--color-danger);"></div>
+        Sin stock
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;
+                font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:50%;
+                    background:var(--color-warning);"></div>
+        Crítico (&lt;5)
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;
+                font-size:.8125rem;">
+        <div style="width:12px;height:12px;border-radius:50%;
+                    background:#eab308;"></div>
+        Bajo (&lt;10)
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-wrapper">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-shield-check"
+                   style="color:var(--color-success);"></i>
+                <p>¡Todos los productos tienen stock suficiente!</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Producto</th>
+                        <th>Stock disponible</th>
+                        <th>Reservado</th>
+                        <th>Nivel</th>
+                        <th>Ubicaciones con stock</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model)
+                    {
+                        <tr style="background:@(p.Nivel == "sinstock"
+                                                        ? "rgba(220,38,38,0.04)"
+                                                        : p.Nivel == "critico"
+                                                            ? "rgba(217,119,6,0.04)"
+                                                            : "transparent");">
+                    <td>
+                        <div style="display:flex;
+                                            align-items:center;gap:10px;">
+                            @if (!string.IsNullOrEmpty(p.ImagenUrl))
+                                    {
+                                        <img src="@p.ImagenUrl"
+                                             style="width:32px;height:32px;
+                                                                object-fit:cover;
+                                                                border-radius:var(--radius);
+                                                                border:1px solid var(--color-border);" />
+                                    }
+                                    <div>
+                                        <div style="font-weight:500;
+                                                            font-size:.875rem;">
+                                            @p.Nombre
+                                        </div>
+                                        <div style="font-size:.75rem;
+                                                            font-family:monospace;
+                                                            color:var(--color-text-muted);">
+                                            @p.SKU
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-size:1.25rem;font-weight:700;
+                                            color:@(p.Nivel == "sinstock"
+                                                                              ? "var(--color-danger)"
+                                                                              : p.Nivel == "critico"
+                                                                                  ? "var(--color-warning)"
+                                                                                  : "#eab308");">
+                            @p.StockTotal
+                        </span>
+                    </td>
+                    <td style="font-weight:500;
+                                       color:var(--color-warning);">
+                        @p.StockReservado
+                    </td>
+                    <td>
+                        @{
+                                    var (lbc, ltxt) = p.Nivel switch
+                                    {
+                                        "sinstock" => ("badge-critico", "Sin stock"),
+                                        "critico" => ("badge-alerta", "Crítico"),
+                                        _ => ("badge-alerta", "Bajo")
+                                    };
+                                }
+                                <span class="badge-status @lbc">@ltxt</span>
+                            </td>
+                            <td style="font-size:.8125rem;
+                                               color:var(--color-text-secondary);">
+                                @if (p.Ubicaciones.Any())
+                                {
+                                    @string.Join(", ", p.Ubicaciones.Take(2))
+                                    @if (p.Ubicaciones.Count > 2)
+                                    {
+                                        <span style="color:var(--color-text-muted);">
+                                            +@(p.Ubicaciones.Count - 2) más
+                                        </span>
+                                    }
+                                }
+                                else
+                                {
+                                    <span style="color:var(--color-text-muted);">
+                                        Sin ubicación con stock
+                                    </span>
+                                }
+                            </td>
+                            <td>
+                                <a href="/Movimientos/Registrar?productoId=@p.ProductoId"
+                                   class="btn-icon" title="Registrar entrada">
+                                    <i class="bi bi-plus-circle"
+                                       style="color:var(--color-success);"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

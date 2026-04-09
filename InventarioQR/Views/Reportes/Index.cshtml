@@ -1,0 +1,230 @@
+﻿@model InventarioQR.ViewModels.ReporteResumenGlobalDto
+@{
+    ViewData["Title"] = "Reportes";
+    ViewData["Section"] = "Reportes";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Reportes</div>
+        <div class="page-subtitle">Resumen operacional del sistema</div>
+    </div>
+</div>
+
+<!-- Stats globales -->
+<div class="grid-4" style="margin-bottom:24px;">
+    <div class="stat-card">
+        <div class="stat-icon blue"><i class="bi bi-tag"></i></div>
+        <div>
+            <div class="stat-value">@Model.TotalProductos</div>
+            <div class="stat-label">Productos activos</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon green"><i class="bi bi-arrow-left-right"></i></div>
+        <div>
+            <div class="stat-value">@Model.TotalMovimientosMes</div>
+            <div class="stat-label">Movimientos este mes</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow"><i class="bi bi-exclamation-triangle"></i></div>
+        <div>
+            <div class="stat-value">@Model.ProductosBajoStock</div>
+            <div class="stat-label">Bajo stock</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon red"><i class="bi bi-x-circle"></i></div>
+        <div>
+            <div class="stat-value">@Model.ProductosSinStock</div>
+            <div class="stat-label">Sin stock</div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficas -->
+<div class="grid-2" style="margin-bottom:24px;">
+
+    <!-- Movimientos semana -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Movimientos — últimos 7 días</span>
+        </div>
+        <div class="card-body">
+            <canvas id="chartSemana" height="120"></canvas>
+        </div>
+    </div>
+
+    <!-- Por tipo -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Distribución por tipo (mes actual)</span>
+        </div>
+        <div class="card-body"
+             style="display:flex;align-items:center;
+                    justify-content:center;">
+            <canvas id="chartTipo"
+                    style="max-height:200px;max-width:200px;"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- Accesos rápidos a reportes -->
+<div class="grid-3" style="margin-bottom:24px;">
+
+    <a href="/Reportes/StockBajo"
+       class="card"
+       style="padding:20px;text-decoration:none;
+              transition:var(--transition);display:block;">
+        <div style="display:flex;align-items:center;gap:12px;
+                    margin-bottom:12px;">
+            <div class="stat-icon red" style="flex-shrink:0;">
+                <i class="bi bi-exclamation-triangle"></i>
+            </div>
+            <div style="font-weight:600;">Reporte Stock Bajo</div>
+        </div>
+        <p style="font-size:.875rem;color:var(--color-text-secondary);margin:0;">
+            Productos con menos de 10 unidades disponibles,
+            clasificados por nivel crítico.
+        </p>
+        <div style="margin-top:12px;font-size:.8125rem;
+                    color:var(--color-accent);font-weight:500;">
+            Ver reporte →
+        </div>
+    </a>
+
+    <a href="/Reportes/Movimientos"
+       class="card"
+       style="padding:20px;text-decoration:none;
+              transition:var(--transition);display:block;">
+        <div style="display:flex;align-items:center;gap:12px;
+                    margin-bottom:12px;">
+            <div class="stat-icon blue" style="flex-shrink:0;">
+                <i class="bi bi-arrow-left-right"></i>
+            </div>
+            <div style="font-weight:600;">Reporte Movimientos</div>
+        </div>
+        <p style="font-size:.875rem;color:var(--color-text-secondary);margin:0;">
+            Historial completo de entradas, salidas,
+            transferencias y ajustes con filtros.
+        </p>
+        <div style="margin-top:12px;font-size:.8125rem;
+                    color:var(--color-accent);font-weight:500;">
+            Ver reporte →
+        </div>
+    </a>
+
+    <a href="/Reportes/Rotacion"
+       class="card"
+       style="padding:20px;text-decoration:none;
+              transition:var(--transition);display:block;">
+        <div style="display:flex;align-items:center;gap:12px;
+                    margin-bottom:12px;">
+            <div class="stat-icon green" style="flex-shrink:0;">
+                <i class="bi bi-arrow-repeat"></i>
+            </div>
+            <div style="font-weight:600;">Reporte Rotación</div>
+        </div>
+        <p style="font-size:.875rem;color:var(--color-text-secondary);margin:0;">
+            Índice de rotación por producto —
+            identifica los de mayor y menor movimiento.
+        </p>
+        <div style="margin-top:12px;font-size:.8125rem;
+                    color:var(--color-accent);font-weight:500;">
+            Ver reporte →
+        </div>
+    </a>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        (function () {
+            // Gráfica semana
+            const labSemana = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                            Model.MovimientosSemana.Select(d => d.Dia)));
+        const entradas  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.MovimientosSemana.Select(d => d.Entradas)));
+        const salidas   = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.MovimientosSemana.Select(d => d.Salidas)));
+        const transfers = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.MovimientosSemana.Select(d => d.Transferencias)));
+
+        new Chart(document.getElementById('chartSemana'), {
+            type: 'bar',
+            data: {
+                labels: labSemana,
+                datasets: [
+                    {
+                        label: 'Entradas',
+                        data: entradas,
+                        backgroundColor: 'rgba(22,163,74,0.2)',
+                        borderColor: '#16a34a',
+                        borderWidth: 1.5,
+                        borderRadius: 2
+                    },
+                    {
+                        label: 'Salidas',
+                        data: salidas,
+                        backgroundColor: 'rgba(220,38,38,0.15)',
+                        borderColor: '#dc2626',
+                        borderWidth: 1.5,
+                        borderRadius: 2
+                    },
+                    {
+                        label: 'Transferencias',
+                        data: transfers,
+                        backgroundColor: 'rgba(8,145,178,0.15)',
+                        borderColor: '#0891b2',
+                        borderWidth: 1.5,
+                        borderRadius: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0 },
+                        grid: { color: 'rgba(0,0,0,0.04)' }
+                    }
+                }
+            }
+        });
+
+            // Gráfica por tipo (donut)
+            const labTipo  = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.MovimientosPorTipo.Select(t => t.Tipo)));
+        const dataTipo = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+                        Model.MovimientosPorTipo.Select(t => t.Total)));
+
+        new Chart(document.getElementById('chartTipo'), {
+            type: 'doughnut',
+            data: {
+                labels: labTipo,
+                datasets: [{
+                    data: dataTipo,
+                    backgroundColor: [
+                        '#16a34a','#dc2626','#0891b2','#d97706'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '65%',
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+    })();
+</script>
+}

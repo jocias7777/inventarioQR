@@ -1,0 +1,687 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.ProductoListaDto>
+@{
+    ViewData["Title"] = "Productos";
+    ViewData["Section"] = "Inventario";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Productos</div>
+        <div class="page-subtitle">Catálogo completo — @Model.TotalItemCount registros</div>
+    </div>
+    @if (User.IsInRole("Administrador") || User.IsInRole("Bodega"))
+    {
+        <button class="btn-primary-app" onclick="abrirModalCrear()">
+            <i class="bi bi-plus-lg"></i> Agregar Producto
+        </button>
+    }
+</div>
+
+<!-- Filtros -->
+<form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+    <div style="position:relative;flex:1;min-width:220px;max-width:520px;">
+
+        <i class="bi bi-search" style="position:absolute;left:10px;top:50%;
+           transform:translateY(-50%);color:var(--color-text-muted);font-size:.875rem;"></i>
+        <input type="text" name="busqueda" value="@ViewBag.Busqueda"
+               placeholder="Buscar por nombre o SKU..."
+               id="searchInput"
+               style="width:100%;padding:8px 12px 8px 32px;
+                      border:1px solid var(--color-border);border-radius:var(--radius);
+                      font-size:.875rem;font-family:inherit;"
+               autocomplete="off" />
+        <div id="searchDropdown" style="display:none;position:absolute;top:100%;left:0;
+             right:0;background:#fff;border:1px solid var(--color-border);
+             border-radius:var(--radius);box-shadow:var(--shadow-md);z-index:50;"></div>
+    </div>
+
+    <select name="estado" style="padding:8px 12px;border:1px solid var(--color-border);
+            border-radius:var(--radius);font-size:.875rem;font-family:inherit;
+            background:#fff;color:var(--color-text-primary);">
+        <option value="">Todos los estados</option>
+        <option value="Activo" selected="@(ViewBag.Estado == "Activo")">Activo</option>
+        <option value="Inactivo" selected="@(ViewBag.Estado == "Inactivo")">Inactivo</option>
+    </select>
+
+    <button type="submit" class="btn-secondary-app">
+        <i class="bi bi-funnel"></i> Filtrar
+    </button>
+
+    @if (!string.IsNullOrEmpty(ViewBag.Busqueda as string) ||
+        !string.IsNullOrEmpty(ViewBag.Estado as string))
+    {
+        <a href="/Productos" class="btn-secondary-app">
+            <i class="bi bi-x"></i> Limpiar
+        </a>
+    }
+</form>
+
+<!-- Tabla + panel lateral -->
+<div style="display:flex;gap:20px;align-items:flex-start;">
+
+    <div class="card" style="flex:1;min-width:0;">
+        <div class="table-wrapper">
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-tag"></i>
+                    <p>No se encontraron productos.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table productos-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>SKU</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Variantes</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in Model)
+                        {
+                            <tr class="producto-row" data-id="@p.Id"
+                                style="cursor:pointer;"
+                                onclick="verDetalle(@p.Id, this)">
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        @if (!string.IsNullOrEmpty(p.ImagenUrl))
+                                        {
+                                            <img src="@p.ImagenUrl" alt=""
+                                                 style="width:36px;height:36px;object-fit:cover;
+                                                                    border-radius:var(--radius);
+                                                                    border:1px solid var(--color-border);" />
+                                        }
+                                        else
+                                        {
+                                            <div style="width:36px;height:36px;background:var(--color-border-light);
+                                                                    border-radius:var(--radius);display:flex;
+                                                                    align-items:center;justify-content:center;
+                                                                    color:var(--color-text-muted);">
+                                                <i class="bi bi-image"></i>
+                                            </div>
+                                        }
+                                        <span style="font-weight:500;">@p.Nombre</span>
+                                    </div>
+                                </td>
+                                <td style="font-family:monospace;font-size:.8125rem;
+                                                   color:var(--color-text-secondary);">
+                                    @p.SKU
+                                </td>
+                                <td>Q @p.PrecioBase.ToString("N2")</td>
+                                <td>
+                                    <span style="font-weight:600;
+                                                         color:@(p.StockTotal == 0 ? "var(--color-danger)" :
+                                                                                                   p.StockTotal < 10 ? "var(--color-warning)" :
+                                                                                                   "var(--color-success)");">
+                                @p.StockTotal
+                            </span>
+                        </td>
+                        <td>
+                            @{
+                                var estadoColor = p.Estado == "Activo"
+                                    ? "var(--color-success)"
+                                    : "var(--color-text-muted)";
+                            }
+                            <span style="display:inline-flex;align-items:center;padding:4px 10px;
+                                         font-size:.75rem;font-weight:600;line-height:1;
+                                         border:1px solid @estadoColor;background:@estadoColor;
+                                         color:#fff;border-radius:var(--radius);">
+                                @p.Estado
+                            </span>
+                        </td>
+                        <td style="color:var(--color-text-muted);font-size:.8125rem;">
+                            @p.TotalVariantes var.
+                        </td>
+                        <td onclick="event.stopPropagation()">
+                            <div style="display:flex;gap:4px;">
+                                @if (User.IsInRole("Administrador") || User.IsInRole("Bodega"))
+                                        {
+                                            <button class="btn-icon" title="Editar"
+                                                    onclick="abrirModalEditar(@p.Id, '@Html.Raw(p.Nombre.Replace("'", "\\'"))')">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                        }
+                                        @if (User.IsInRole("Administrador"))
+                                        {
+                                            <button class="btn-icon" title="Eliminar"
+                                                    onclick="confirmDelete('/Productos/Eliminar/@p.Id', '¿Eliminar @p.Nombre?')">
+                                                <i class="bi bi-trash" style="color:var(--color-danger);"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Model.PageCount > 1)
+                {
+                    <div style="display:flex;align-items:center;justify-content:space-between;
+                                        padding:12px 16px;border-top:1px solid var(--color-border);">
+                        <span style="font-size:.8125rem;color:var(--color-text-muted);">
+                            Página @Model.PageNumber de @Model.PageCount (@Model.TotalItemCount registros)
+                        </span>
+                        <div style="display:flex;gap:4px;">
+                            @if (Model.HasPreviousPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber - 1)&busqueda=@ViewBag.Busqueda&estado=@ViewBag.Estado"
+                                   class="btn-secondary-app" style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            }
+                            @if (Model.HasNextPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber + 1)&busqueda=@ViewBag.Busqueda&estado=@ViewBag.Estado"
+                                   class="btn-secondary-app" style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Panel lateral detalle -->
+    <div id="panelDetalle" style="width:340px;flex-shrink:0;display:none;">
+        <div class="card" id="panelContenido">
+            <div style="padding:16px;border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-weight:600;font-size:.9375rem;">Detalle del producto</span>
+                <button class="btn-icon" onclick="cerrarPanel()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="panelBody" style="padding:20px;">
+                <div style="text-align:center;color:var(--color-text-muted);padding:40px 0;">
+                    <i class="bi bi-cursor" style="font-size:2rem;"></i>
+                    <p style="margin-top:8px;font-size:.875rem;">Selecciona un producto</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL CREAR
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalCrear" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);
+                    box-shadow:var(--shadow-md);">
+
+            <div class="modal-header"
+                 style="padding:10px 18px;border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-weight:600;font-size:.9375rem;">Nuevo producto</div>
+                    <div style="font-size:.75rem;color:var(--color-text-muted);">
+                        Completa la información del catálogo
+                    </div>
+                </div>
+                <button type="button" class="btn-icon" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <div class="modal-body" style="padding:14px 18px;">
+                <form id="formCrear" asp-action="Crear" asp-controller="Productos"
+                      method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+
+                    <div class="card" style="margin-bottom:10px;">
+                        <div class="card-header" style="padding:7px 12px;">
+                            <span class="card-title">Información básica</span>
+                        </div>
+                        <div class="card-body" style="padding:10px 12px;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+                                <div>
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">SKU *</label>
+                                    <input name="SKU" class="form-control" placeholder="Ej: PROD-001"
+                                           style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" required />
+                                </div>
+
+                                <div>
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Estado</label>
+                                    <select name="Estado" class="form-select"
+                                            style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;">
+                                        <option value="Activo">Activo</option>
+                                        <option value="Inactivo">Inactivo</option>
+                                    </select>
+                                </div>
+
+                                <div style="grid-column:1/-1;">
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Nombre *</label>
+                                    <input name="Nombre" class="form-control"
+                                           placeholder="Nombre descriptivo del producto"
+                                           style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" required />
+                                </div>
+
+                                <div>
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Precio base (Q)</label>
+                                    <input name="PrecioBase" type="number" step="0.01"
+                                           class="form-control" placeholder="0.00"
+                                           style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" />
+                                </div>
+
+                                <div>
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Imagen</label>
+                                    <input name="ImagenFile" type="file" accept=".jpg,.jpeg,.png,.webp"
+                                           class="form-control"
+                                           style="border-radius:var(--radius);padding:3px 8px;font-size:.8125rem;"
+                                           onchange="previewImgModal('imgPreviewCrear', this)" />
+                                    <img id="imgPreviewCrear" src="#" alt=""
+                                         style="display:none;margin-top:5px;height:55px;object-fit:cover;
+                                                border-radius:var(--radius);border:1px solid var(--color-border);" />
+                                </div>
+
+                                <div style="grid-column:1/-1;">
+                                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Descripción</label>
+                                    <textarea name="Descripcion" class="form-control" rows="2"
+                                              placeholder="Descripción opcional..."
+                                              style="border-radius:var(--radius);resize:vertical;
+                                                     padding:5px 10px;font-size:.875rem;"></textarea>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header" style="padding:7px 12px;">
+                            <span class="card-title">Variantes (opcional)</span>
+                            <button type="button" class="btn-secondary-app"
+                                    style="padding:3px 10px;font-size:.75rem;"
+                                    onclick="agregarVariante('variantesCrear','varIdxCrear')">
+                                <i class="bi bi-plus"></i> Agregar
+                            </button>
+                        </div>
+                        <div class="card-body" style="padding:8px 12px;">
+                            <div id="variantesCrear">
+                                <p id="emptyLabelCrear"
+                                   style="font-size:.8125rem;color:var(--color-text-muted);
+                                          text-align:center;padding:8px 0;margin:0;">
+                                    Sin variantes — haz clic en "Agregar" para añadir.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="modal-footer"
+                 style="padding:10px 18px;border-top:1px solid var(--color-border);
+                        display:flex;gap:10px;justify-content:flex-end;">
+                <button type="button" class="btn-secondary-app" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="submit" form="formCrear" class="btn-primary-app">
+                    <i class="bi bi-check-lg"></i> Guardar producto
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL EDITAR  — footer siempre visible
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalEditar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);
+                    box-shadow:var(--shadow-md);">
+
+            <!-- Header compacto -->
+            <div class="modal-header"
+                 style="padding:10px 18px;border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                <div>
+                    <div style="font-weight:600;font-size:.9375rem;">Editar producto</div>
+                    <div id="editarSubtitle" style="font-size:.75rem;color:var(--color-text-muted);"></div>
+                </div>
+                <button type="button" class="btn-icon" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Loader -->
+            <div id="editarLoading"
+                 style="padding:50px;text-align:center;color:var(--color-text-muted);">
+                <div class="spinner-border spinner-border-sm"></div>
+                <p style="margin-top:10px;font-size:.875rem;">Cargando datos...</p>
+            </div>
+
+            <!-- Cuerpo scrolleable + footer fijo dentro del modal-content -->
+            <div id="editarReal" style="display:none;">
+
+                <div class="modal-body" style="padding:14px 18px;">
+                    <form id="formEditar" method="post" enctype="multipart/form-data">
+                        @Html.AntiForgeryToken()
+
+                        <div class="card" style="margin-bottom:10px;">
+                            <div class="card-header" style="padding:7px 12px;">
+                                <span class="card-title">Información básica</span>
+                            </div>
+                            <div class="card-body" style="padding:10px 12px;">
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+
+                                    <div>
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">SKU *</label>
+                                        <input id="eSKU" name="SKU" class="form-control"
+                                               style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" required />
+                                    </div>
+
+                                    <div>
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Estado</label>
+                                        <select id="eEstado" name="Estado" class="form-select"
+                                                style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;">
+                                            <option value="Activo">Activo</option>
+                                            <option value="Inactivo">Inactivo</option>
+                                        </select>
+                                    </div>
+
+                                    <div style="grid-column:1/-1;">
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Nombre *</label>
+                                        <input id="eNombre" name="Nombre" class="form-control"
+                                               style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" required />
+                                    </div>
+
+                                    <div>
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Precio base (Q)</label>
+                                        <input id="ePrecioBase" name="PrecioBase" type="number" step="0.01"
+                                               class="form-control"
+                                               style="border-radius:var(--radius);padding:5px 10px;font-size:.875rem;" />
+                                    </div>
+
+                                    <div>
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Cambiar imagen</label>
+                                        <input name="ImagenFile" type="file" accept=".jpg,.jpeg,.png,.webp"
+                                               class="form-control"
+                                               style="border-radius:var(--radius);padding:3px 8px;font-size:.8125rem;"
+                                               onchange="previewImgModal('imgPreviewEditar', this)" />
+                                        <img id="imgPreviewEditar" src="#" alt=""
+                                             style="display:none;margin-top:5px;height:55px;object-fit:cover;
+                                                    border-radius:var(--radius);border:1px solid var(--color-border);" />
+                                    </div>
+
+                                    <div style="grid-column:1/-1;">
+                                        <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Descripción</label>
+                                        <textarea id="eDescripcion" name="Descripcion"
+                                                  class="form-control" rows="2"
+                                                  style="border-radius:var(--radius);resize:vertical;
+                                                         padding:5px 10px;font-size:.875rem;"></textarea>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header" style="padding:7px 12px;">
+                                <span class="card-title">Variantes</span>
+                                <button type="button" class="btn-secondary-app"
+                                        style="padding:3px 10px;font-size:.75rem;"
+                                        onclick="agregarVariante('variantesEditar','varIdxEditar')">
+                                    <i class="bi bi-plus"></i> Agregar
+                                </button>
+                            </div>
+                            <div class="card-body" style="padding:8px 12px;">
+                                <div id="variantesEditar"></div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" id="eId" name="Id" />
+                        <input type="hidden" id="eImagenUrl" name="ImagenUrl" />
+
+                    </form>
+                </div>
+
+                <!-- Footer SIEMPRE visible gracias a modal-dialog-scrollable -->
+                <div class="modal-footer"
+                     style="padding:10px 18px;border-top:1px solid var(--color-border);
+                            display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;">
+                    <button type="button" class="btn-secondary-app" data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" form="formEditar" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Guardar cambios
+                    </button>
+                </div>
+
+            </div><!-- /#editarReal -->
+
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        // ═══════════════════════════════════════════
+        // PANEL LATERAL
+        // ═══════════════════════════════════════════
+        async function verDetalle(id, row) {
+            document.querySelectorAll('.producto-row').forEach(r => r.style.background = '');
+            row.style.background = 'var(--color-accent-light)';
+            document.getElementById('panelDetalle').style.display = 'block';
+            document.getElementById('panelBody').innerHTML =
+                '<div style="text-align:center;padding:40px 0;color:var(--color-text-muted);">' +
+                '<div class="spinner-border spinner-border-sm"></div>' +
+                '<p style="margin-top:8px;font-size:.8125rem;">Cargando...</p></div>';
+            const res  = await fetch(`/Productos/Detalle/${id}`);
+            const html = await res.text();
+            document.getElementById('panelBody').innerHTML = html;
+        }
+
+        function cerrarPanel() {
+            document.getElementById('panelDetalle').style.display = 'none';
+            document.querySelectorAll('.producto-row').forEach(r => r.style.background = '');
+        }
+
+        // ═══════════════════════════════════════════
+        // BÚSQUEDA AJAX LIVE
+        // ═══════════════════════════════════════════
+        let searchTimer;
+        const searchInput = document.getElementById('searchInput');
+        const dropdown    = document.getElementById('searchDropdown');
+
+        searchInput?.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            const q = this.value.trim();
+            if (q.length < 2) { dropdown.style.display = 'none'; return; }
+            searchTimer = setTimeout(async () => {
+                const res  = await fetch(`/Productos/BuscarAjax?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                if (!data.length) { dropdown.style.display = 'none'; return; }
+                dropdown.innerHTML = data.map(p => `
+                    <div onclick="window.location='/Productos?busqueda=${p.sku}'"
+                         style="padding:10px 14px;cursor:pointer;
+                                border-bottom:1px solid var(--color-border-light);
+                                display:flex;justify-content:space-between;align-items:center;"
+                         onmouseenter="this.style.background='var(--color-border-light)'"
+                         onmouseleave="this.style.background=''">
+                        <div>
+                            <div style="font-size:.875rem;font-weight:500;">${p.nombre}</div>
+                            <div style="font-size:.75rem;color:var(--color-text-muted);">${p.sku}</div>
+                        </div>
+                        <div style="font-size:.75rem;font-weight:600;
+                                    color:${p.stockTotal===0?'var(--color-danger)':'var(--color-success)'};">
+                            ${p.stockTotal} uds
+                        </div>
+                    </div>`).join('');
+                dropdown.style.display = 'block';
+            }, 300);
+        });
+
+        document.addEventListener('click', e => {
+            if (!searchInput.contains(e.target) && !dropdown.contains(e.target))
+                dropdown.style.display = 'none';
+        });
+
+        // ═══════════════════════════════════════════
+        // UTILIDADES COMPARTIDAS
+        // ═══════════════════════════════════════════
+        const varCounters = { varIdxCrear: 0, varIdxEditar: 0 };
+
+        function agregarVariante(containerId, counterKey) {
+            const c   = document.getElementById(containerId);
+            const idx = varCounters[counterKey];
+            const empty = c.querySelector('p');
+            if (empty) empty.remove();
+            const div = document.createElement('div');
+            div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
+            div.innerHTML = `
+                <div>
+                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Color</label>
+                    <input type="text" name="Variantes[${idx}].Color" class="form-control"
+                           placeholder="Rojo"
+                           style="border-radius:var(--radius);padding:5px 9px;font-size:.8125rem;" />
+                </div>
+                <div>
+                    <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Talla</label>
+                    <input type="text" name="Variantes[${idx}].Tamaño" class="form-control"
+                           placeholder="M / XL / 42"
+                           style="border-radius:var(--radius);padding:5px 9px;font-size:.8125rem;" />
+                </div>
+                <button type="button" class="btn-icon" onclick="this.parentElement.remove()">
+                    <i class="bi bi-trash" style="color:var(--color-danger);"></i>
+                </button>`;
+            c.appendChild(div);
+            varCounters[counterKey]++;
+        }
+
+        function previewImgModal(previewId, input) {
+            const preview = document.getElementById(previewId);
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => { preview.src = e.target.result; preview.style.display = 'block'; };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g,'&amp;').replace(/"/g,'&quot;')
+                .replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        // ═══════════════════════════════════════════
+        // MODAL CREAR
+        // ═══════════════════════════════════════════
+        function abrirModalCrear() {
+            document.getElementById('formCrear').reset();
+            document.getElementById('imgPreviewCrear').style.display = 'none';
+            document.getElementById('variantesCrear').innerHTML =
+                '<p id="emptyLabelCrear" style="font-size:.8125rem;color:var(--color-text-muted);' +
+                'text-align:center;padding:8px 0;margin:0;">' +
+                'Sin variantes — haz clic en "Agregar" para añadir.</p>';
+            varCounters.varIdxCrear = 0;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalCrear')).show();
+        }
+
+        document.getElementById('modalCrear').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('formCrear').reset();
+            document.getElementById('imgPreviewCrear').style.display = 'none';
+            document.getElementById('variantesCrear').innerHTML =
+                '<p id="emptyLabelCrear" style="font-size:.8125rem;color:var(--color-text-muted);' +
+                'text-align:center;padding:8px 0;margin:0;">' +
+                'Sin variantes — haz clic en "Agregar" para añadir.</p>';
+            varCounters.varIdxCrear = 0;
+        });
+
+        // ═══════════════════════════════════════════
+        // MODAL EDITAR
+        // ═══════════════════════════════════════════
+        async function abrirModalEditar(id, nombre) {
+            document.getElementById('editarSubtitle').textContent  = nombre || '';
+            document.getElementById('editarLoading').style.display = 'block';
+            document.getElementById('editarReal').style.display    = 'none';
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('modalEditar')).show();
+
+            try {
+                const res  = await fetch(`/Productos/ObtenerJson/${id}`);
+                const data = await res.json();
+
+                document.getElementById('eId').value          = data.id;
+                document.getElementById('eSKU').value         = data.sku;
+                document.getElementById('eNombre').value      = data.nombre;
+                document.getElementById('eEstado').value      = data.estado;
+                document.getElementById('ePrecioBase').value  = data.precioBase;
+                document.getElementById('eDescripcion').value = data.descripcion || '';
+                document.getElementById('eImagenUrl').value   = data.imagenUrl   || '';
+                document.getElementById('editarSubtitle').textContent = data.nombre;
+
+                const imgEl = document.getElementById('imgPreviewEditar');
+                if (data.imagenUrl) { imgEl.src = data.imagenUrl; imgEl.style.display = 'block'; }
+                else                { imgEl.style.display = 'none'; }
+
+                document.getElementById('formEditar').action = `/Productos/Editar/${id}`;
+
+                const vc = document.getElementById('variantesEditar');
+                vc.innerHTML = '';
+                varCounters.varIdxEditar = 0;
+
+                if (data.variantes && data.variantes.length > 0) {
+                    data.variantes.forEach((v, i) => {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px;align-items:end;';
+                        div.innerHTML = `
+                            <div>
+                                <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Color</label>
+                                <input type="text" name="Variantes[${i}].Color"
+                                       value="${escHtml(v.color||'')}" class="form-control"
+                                       style="border-radius:var(--radius);padding:5px 9px;font-size:.8125rem;" />
+                            </div>
+                            <div>
+                                <label style="font-size:.75rem;font-weight:500;display:block;margin-bottom:3px;">Talla</label>
+                                <input type="text" name="Variantes[${i}].Tamaño"
+                                       value="${escHtml(v.tamaño||'')}" class="form-control"
+                                       style="border-radius:var(--radius);padding:5px 9px;font-size:.8125rem;" />
+                            </div>
+                            <button type="button" class="btn-icon" onclick="this.parentElement.remove()">
+                                <i class="bi bi-trash" style="color:var(--color-danger);"></i>
+                            </button>`;
+                        vc.appendChild(div);
+                        varCounters.varIdxEditar = i + 1;
+                    });
+                } else {
+                    vc.innerHTML = '<p style="font-size:.8125rem;color:var(--color-text-muted);' +
+                                   'text-align:center;padding:8px 0;margin:0;">Sin variantes registradas.</p>';
+                }
+
+                document.getElementById('editarLoading').style.display = 'none';
+                document.getElementById('editarReal').style.display    = 'block';
+
+            } catch (err) {
+                document.getElementById('editarLoading').innerHTML =
+                    '<p style="color:var(--color-danger);text-align:center;padding:20px;">' +
+                    'Error al cargar el producto.</p>';
+                console.error(err);
+            }
+        }
+
+        document.getElementById('modalEditar').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('editarLoading').style.display = 'block';
+            document.getElementById('editarReal').style.display    = 'none';
+            document.getElementById('editarSubtitle').textContent  = '';
+            document.getElementById('imgPreviewEditar').style.display = 'none';
+            varCounters.varIdxEditar = 0;
+        });
+    </script>
+}

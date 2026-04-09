@@ -1,0 +1,254 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.InventarioListaDto>
+@{
+    ViewData["Title"] = "Inventario";
+    ViewData["Section"] = "Inventario";
+    var resumen = ViewBag.Resumen as InventarioQR.ViewModels.InventarioResumenGlobalDto;
+    var bodegas = ViewBag.Bodegas as List<string> ?? new();
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Inventario</div>
+        <div class="page-subtitle">@Model.TotalItemCount registros totales</div>
+    </div>
+  
+</div>
+
+<!-- Stats resumen -->
+@if (resumen != null)
+{
+    <div class="grid-4" style="margin-bottom:20px;">
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="bi bi-check-circle"></i></div>
+            <div>
+                <div class="stat-value">@resumen.TotalDisponible.ToString("N0")</div>
+                <div class="stat-label">Total disponible</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow"><i class="bi bi-bookmark"></i></div>
+            <div>
+                <div class="stat-value">@resumen.TotalReservado.ToString("N0")</div>
+                <div class="stat-label">Total reservado</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red"><i class="bi bi-exclamation-triangle"></i></div>
+            <div>
+                <div class="stat-value">@resumen.ProductosBajoStock</div>
+                <div class="stat-label">Bajo stock (&lt;10)</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon gray"><i class="bi bi-x-circle"></i></div>
+            <div>
+                <div class="stat-value">@resumen.ProductosSinStock</div>
+                <div class="stat-label">Sin stock</div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Filtros -->
+<form method="get" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:20px;">
+    <div style="position:relative;flex:1;min-width:220px;max-width:550px;">
+        <i class="bi bi-search" style="position:absolute;left:10px;top:50%;
+           transform:translateY(-50%);color:var(--color-text-muted);"></i>
+        <input type="text" name="busqueda" value="@ViewBag.Busqueda"
+               placeholder="Buscar producto o SKU..."
+               style="width:100%;padding:8px 12px 8px 32px;
+                      border:1px solid var(--color-border);
+                      border-radius:var(--radius);font-size:.875rem;
+                      font-family:inherit;" />
+    </div>
+
+    <select name="bodega"
+            style="padding:8px 12px;border:1px solid var(--color-border);
+                   border-radius:var(--radius);font-size:.875rem;
+                   font-family:inherit;background:#fff;">
+        <option value="">Todas las bodegas</option>
+        @foreach (var b in bodegas)
+        {
+            <option value="@b" selected="@(ViewBag.Bodega == b)">@b</option>
+        }
+    </select>
+
+    <button type="submit" class="btn-secondary-app">
+        <i class="bi bi-funnel"></i> Filtrar
+    </button>
+    @if (!string.IsNullOrEmpty(ViewBag.Busqueda as string) ||
+        !string.IsNullOrEmpty(ViewBag.Bodega as string))
+    {
+        <a href="/Inventario" class="btn-secondary-app">
+            <i class="bi bi-x"></i> Limpiar
+        </a>
+    }
+</form>
+
+<!-- Tabla + panel -->
+<div style="display:flex;gap:20px;align-items:flex-start;">
+
+    <div class="card" style="flex:1;min-width:0;">
+        <div class="table-wrapper">
+            @if (!Model.Any())
+            {
+                <div class="empty-state">
+                    <i class="bi bi-box-seam"></i>
+                    <p>Sin registros de inventario.</p>
+                </div>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Ubicación</th>
+                            <th>Disponible</th>
+                            <th>Reservado</th>
+                            <th>Dañado</th>
+                            <th>Total</th>
+                            <th>Actualizado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var inv in Model)
+                        {
+                            <tr class="inv-row" style="cursor:pointer;"
+                                onclick="verDetalle(@inv.Id, this)">
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        @if (!string.IsNullOrEmpty(inv.ProductoImagenUrl))
+                                        {
+                                            <img src="@inv.ProductoImagenUrl"
+                                                 style="width:32px;height:32px;object-fit:cover;
+                                                                                border-radius:var(--radius);
+                                                                                border:1px solid var(--color-border);" />
+                                        }
+                                        else
+                                        {
+                                            <div style="width:32px;height:32px;
+                                                                                background:var(--color-border-light);
+                                                                                border-radius:var(--radius);
+                                                                                display:flex;align-items:center;
+                                                                                justify-content:center;
+                                                                                color:var(--color-text-muted);">
+                                                <i class="bi bi-box"></i>
+                                            </div>
+                                        }
+                                        <div>
+                                            <div style="font-weight:500;font-size:.875rem;">
+                                                @inv.ProductoNombre
+                                            </div>
+                                            <div style="font-size:.75rem;font-family:monospace;
+                                                                        color:var(--color-text-muted);">
+                                                @inv.ProductoSKU
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="font-size:.8125rem;color:var(--color-text-secondary);
+                                                                max-width:200px;white-space:nowrap;
+                                                                overflow:hidden;text-overflow:ellipsis;"
+                                         title="@inv.Ubicacion">
+                                        @inv.Ubicacion
+                                    </div>
+                                </td>
+                                <td>
+                                    <span style="font-weight:700;
+                                                        color:@(inv.CantidadDisponible == 0
+                                                                                                                                ? "var(--color-danger)"
+                                                                                                                                : inv.CantidadDisponible < 10
+                                                                                                                                    ? "var(--color-warning)"
+                                                                                                                                    : "var(--color-success)");">
+                                @inv.CantidadDisponible
+                            </span>
+                        </td>
+                        <td style="color:var(--color-warning);font-weight:500;">
+                            @inv.CantidadReservada
+                        </td>
+                        <td style="color:var(--color-danger);font-weight:500;">
+                            @inv.CantidadDañada
+                        </td>
+                        <td style="font-weight:600;">@inv.TotalGeneral</td>
+                        <td style="font-size:.75rem;color:var(--color-text-muted);
+                                           white-space:nowrap;">
+                            @inv.UltimaActualizacion.ToString("dd/MM/yy HH:mm")
+                        </td>
+                    </tr>
+                                        }
+                    </tbody>
+                </table>
+
+                <!-- Paginación -->
+                @if (Model.PageCount > 1)
+                {
+                    <div style="display:flex;align-items:center;justify-content:space-between;
+                                                padding:12px 16px;border-top:1px solid var(--color-border);">
+                        <span style="font-size:.8125rem;color:var(--color-text-muted);">
+                            Página @Model.PageNumber de @Model.PageCount
+                        </span>
+                        <div style="display:flex;gap:4px;">
+                            @if (Model.HasPreviousPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber - 1)&busqueda=@ViewBag.Busqueda&bodega=@ViewBag.Bodega"
+                                   class="btn-secondary-app" style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-left"></i>
+                                </a>
+                            }
+                            @if (Model.HasNextPage)
+                            {
+                                <a href="?pagina=@(Model.PageNumber + 1)&busqueda=@ViewBag.Busqueda&bodega=@ViewBag.Bodega"
+                                   class="btn-secondary-app" style="padding:5px 10px;">
+                                    <i class="bi bi-chevron-right"></i>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Panel detalle -->
+    <div id="panelDetalle" style="width:320px;flex-shrink:0;display:none;">
+        <div class="card">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-weight:600;font-size:.9375rem;">Detalle</span>
+                <button class="btn-icon" onclick="cerrarPanel()">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+            <div id="panelBody" style="padding:16px;"></div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        async function verDetalle(id, row) {
+            document.querySelectorAll('.inv-row')
+                .forEach(r => r.style.background = '');
+            row.style.background = 'var(--color-accent-light)';
+
+            document.getElementById('panelDetalle').style.display = 'block';
+            document.getElementById('panelBody').innerHTML =
+                '<div style="text-align:center;padding:32px;color:var(--color-text-muted);">' +
+                '<div class="spinner-border spinner-border-sm"></div></div>';
+
+            const res  = await fetch(`/Inventario/Detalle/${id}`);
+            const html = await res.text();
+            document.getElementById('panelBody').innerHTML = html;
+        }
+
+        function cerrarPanel() {
+            document.getElementById('panelDetalle').style.display = 'none';
+            document.querySelectorAll('.inv-row')
+                .forEach(r => r.style.background = '');
+        }
+    </script>
+}

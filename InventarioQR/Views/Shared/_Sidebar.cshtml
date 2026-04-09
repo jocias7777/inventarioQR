@@ -1,0 +1,129 @@
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<InventarioQR.Models.Entities.ApplicationUser> SignInManager
+@inject UserManager<InventarioQR.Models.Entities.ApplicationUser> UserManager
+
+@{
+    var user = await UserManager.GetUserAsync(User);
+    var rol = user?.Rol ?? "—";
+    var ctrl = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
+    bool IsActive(string c) => ctrl.Equals(c, StringComparison.OrdinalIgnoreCase);
+}
+
+<aside class="sidebar" id="sidebar">
+
+    <!-- Logo -->
+    <a href="/Dashboard" class="sidebar-logo">
+       
+        <span class="logo-text">InventarioQR</span>
+    </a>
+
+    <!-- Nav -->
+    <nav class="sidebar-nav">
+
+        <!-- OPERACIONES -->
+        <div class="nav-group">
+            <div class="nav-group-label">Operaciones</div>
+
+            <a href="/Dashboard" data-tooltip="Dashboard"
+               class="nav-item @(IsActive("Dashboard") ? "active" : "")">
+                <i class="bi bi-grid-1x2"></i>
+                <span>Dashboard</span>
+            </a>
+
+            @if (rol == "Administrador" || rol == "Bodega")
+            {
+                <a href="/Movimientos" data-tooltip="Movimientos"
+                   class="nav-item @(IsActive("Movimientos") ? "active" : "")">
+                    <i class="bi bi-arrow-left-right"></i>
+                    <span>Movimientos</span>
+                </a>
+
+                <a href="/Operaciones" data-tooltip="Operaciones"
+                   class="nav-item @(IsActive("Operaciones") ? "active" : "")">
+                    <i class="bi bi-clipboard-check"></i>
+                    <span>Operaciones</span>
+                </a>
+            }
+
+            <a href="/Reservas" data-tooltip="Reservas"
+               class="nav-item @(IsActive("Reservas") ? "active" : "")">
+                <i class="bi bi-bookmark"></i>
+                <span>Reservas</span>
+            </a>
+        </div>
+
+        <!-- INVENTARIO -->
+        <div class="nav-group">
+            <div class="nav-group-label">Inventario</div>
+
+            <a href="/Inventario" data-tooltip="Inventario"
+               class="nav-item @(IsActive("Inventario") ? "active" : "")">
+                <i class="bi bi-box-seam"></i>
+                <span>Inventario</span>
+            </a>
+
+            <a href="/Productos" data-tooltip="Productos"
+               class="nav-item @(IsActive("Productos") ? "active" : "")">
+                <i class="bi bi-tag"></i>
+                <span>Productos</span>
+            </a>
+
+            @if (rol == "Administrador" || rol == "Bodega")
+            {
+                <a href="/QR" data-tooltip="Códigos QR"
+                   class="nav-item @(IsActive("QR") ? "active" : "")">
+                    <i class="bi bi-qr-code"></i>
+                    <span>Códigos QR</span>
+                </a>
+            }
+
+            <a href="/Escaneo" data-tooltip="Portal Escaneo"
+               class="nav-item @(IsActive("Escaneo") ? "active" : "")">
+                <i class="bi bi-upc-scan"></i>
+                <span>Portal Escaneo</span>
+            </a>
+        </div>
+
+        <!-- CONFIGURACIÓN -->
+        @if (rol == "Administrador")
+        {
+            <div class="nav-group">
+                <div class="nav-group-label">Configuración</div>
+
+                <a href="/Bodega" data-tooltip="Estructura Bodega"
+                   class="nav-item @(IsActive("Bodega") ? "active" : "")">
+                    <i class="bi bi-building"></i>
+                    <span>Estructura Bodega</span>
+                </a>
+
+                <a href="/Usuarios" data-tooltip="Usuarios"
+                   class="nav-item @(IsActive("Usuarios") ? "active" : "")">
+                    <i class="bi bi-people"></i>
+                    <span>Usuarios</span>
+                </a>
+            </div>
+        }
+
+        <!-- REPORTES -->
+        <div class="nav-group">
+            <div class="nav-group-label">Reportes</div>
+
+            <a href="/Reportes" data-tooltip="Reportes"
+               class="nav-item @(IsActive("Reportes") ? "active" : "")">
+                <i class="bi bi-bar-chart"></i>
+                <span>Reportes</span>
+            </a>
+
+            @if (rol == "Administrador")
+            {
+                <a href="/Auditoria" data-tooltip="Auditoría"
+                   class="nav-item @(IsActive("Auditoria") ? "active" : "")">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Auditoría</span>
+                </a>
+            }
+        </div>
+
+    </nav>
+
+</aside>

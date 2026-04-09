@@ -1,0 +1,99 @@
+﻿@model InventarioQR.ViewModels.ReservaDetalleDto
+
+<div style="font-weight:700;font-size:.9375rem;margin-bottom:4px;">
+    @Model.ProductoNombre
+</div>
+<div style="font-family:monospace;font-size:.8125rem;
+            color:var(--color-text-muted);margin-bottom:12px;">
+    @Model.ProductoSKU
+</div>
+
+@{
+    var vencida = Model.EstaVencida;
+    var (bc, lbl) = (Model.Estado, vencida) switch
+    {
+        ("Activa", false) => ("badge-activa-solid", "Activa"),
+        ("Activa", true) => ("badge-vencida-solid", "Vencida"),
+        ("Expirada", _) => ("badge-cancelada-solid", "Cancelada"),
+        ("Completada", _) => ("badge-completada-solid", "Completada"),
+        _ => ("badge-alerta", Model.Estado)
+    };
+}
+
+<div style="display:flex;justify-content:space-between;
+            align-items:center;margin-bottom:14px;">
+    <span class="badge-status @bc" style="font-size:.8125rem;">@lbl</span>
+    <span style="font-weight:700;font-size:1.125rem;">
+        @Model.Cantidad uds
+    </span>
+</div>
+
+<div style="font-size:.6875rem;font-weight:600;text-transform:uppercase;
+            letter-spacing:.08em;color:var(--color-text-muted);
+            margin-bottom:6px;">
+    Ubicación
+</div>
+<div style="background:var(--color-border-light);
+            border-radius:var(--radius);padding:8px 10px;
+            font-size:.8125rem;margin-bottom:14px;
+            line-height:1.5;color:var(--color-text-secondary);">
+    @Model.Ubicacion
+</div>
+
+<div style="display:flex;flex-direction:column;gap:6px;
+            margin-bottom:14px;font-size:.875rem;">
+    @if (!string.IsNullOrEmpty(Model.Referencia))
+    {
+        <div style="display:flex;justify-content:space-between;">
+            <span style="color:var(--color-text-secondary);">Referencia</span>
+            <span style="font-weight:500;">@Model.Referencia</span>
+        </div>
+    }
+    <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--color-text-secondary);">Creado</span>
+        <span>@Model.FechaCreacion.ToString("dd/MM/yy HH:mm")</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--color-text-secondary);">Expira</span>
+        <span style="color:@(vencida ? "var(--color-danger)" : "inherit");">
+            @Model.FechaExpiracion.ToString("dd/MM/yy HH:mm")
+        </span>
+    </div>
+    <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--color-text-secondary);">
+            Stock actual ubicación
+        </span>
+        <span style="font-weight:600;
+            color:@(Model.StockActualUbicacion == 0
+                              ? "var(--color-danger)"
+                              : "var(--color-success)");">
+            @Model.StockActualUbicacion uds
+        </span>
+    </div>
+</div>
+
+@if (Model.Estado == "Activa")
+{
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px;">
+        <form asp-action="Completar" asp-controller="Reservas"
+              method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn-primary-app"
+                    style="width:100%;justify-content:center;"
+                    onclick="return confirmPost(this.form, '¿Confirmar completar reserva?')">
+                <i class="bi bi-check-circle"></i> Completar reserva
+            </button>
+        </form>
+        <form asp-action="Cancelar" asp-controller="Reservas"
+              method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn-danger-app"
+                    style="width:100%;justify-content:center;"
+                    onclick="return confirmPost(this.form, '¿Cancelar y devolver stock?')">
+                <i class="bi bi-x-circle"></i> Cancelar reserva
+            </button>
+        </form>
+    </div>
+}

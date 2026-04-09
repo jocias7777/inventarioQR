@@ -1,0 +1,548 @@
+﻿@model List<InventarioQR.ViewModels.UsuarioListaDto>
+@{
+    ViewData["Title"] = "Usuarios";
+    ViewData["Section"] = "Configuración";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Usuarios del sistema</div>
+        <div class="page-subtitle">
+            @Model.Count usuario(s) registrados
+        </div>
+    </div>
+    <button class="btn-primary-app"
+            data-bs-toggle="modal"
+            data-bs-target="#modalCrearUsuario">
+        <i class="bi bi-plus-lg"></i> Agregar usuario
+    </button>
+</div>
+
+<!-- Stats rápidos -->
+<div class="grid-3" style="margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-icon green">
+            <i class="bi bi-person-check"></i>
+        </div>
+        <div>
+            <div class="stat-value">
+                @Model.Count(u => u.Activo)
+            </div>
+            <div class="stat-label">Usuarios activos</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon blue">
+            <i class="bi bi-shield"></i>
+        </div>
+        <div>
+            <div class="stat-value">
+                @Model.Count(u => u.Rol == "Administrador")
+            </div>
+            <div class="stat-label">Administradores</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon yellow">
+            <i class="bi bi-people"></i>
+        </div>
+        <div>
+            <div class="stat-value">
+                @Model.Count(u => u.Rol == "Bodega" ||
+                u.Rol == "Vendedor")
+            </div>
+            <div class="stat-label">Operativos</div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla -->
+<div class="card">
+    <div class="table-wrapper">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <p>Sin usuarios registrados.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th>Último acceso</th>
+                        <th>Creado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        var iniciales = string.Concat(
+                        u.NombreCompleto.Split(' ')
+                        .Where(w => w.Length > 0)
+                        .Take(2).Select(w => w[0]))
+                        .ToUpper();
+
+                        var rolColor = u.Rol switch
+                        {
+                            "Administrador" => "var(--color-accent)",
+                            "Bodega" => "var(--color-warning)",
+                            _ => "var(--color-text-secondary)"
+                        };
+
+                        <tr>
+                            <td>
+                                <div style="display:flex;
+                                                    align-items:center;gap:10px;">
+                                    <div style="width:36px;height:36px;
+                                                        border-radius:50%;
+                                                        background:@rolColor;
+                                                        color:#fff;
+                                                        display:flex;
+                                                        align-items:center;
+                                                        justify-content:center;
+                                                        font-size:.75rem;
+                                                        font-weight:600;
+                                                        flex-shrink:0;">
+                                        @iniciales
+                                    </div>
+                                    <span style="font-weight:500;
+                                                         font-size:.875rem;">
+                                        @u.NombreCompleto
+                                    </span>
+                                </div>
+                            </td>
+                            <td style="font-size:.875rem;
+                                               color:var(--color-text-secondary);">
+                                @u.Email
+                            </td>
+                            <td>
+                                @{
+                                    var rolBadgeColor = u.Rol switch
+                                    {
+                                        "Administrador" => "var(--color-accent)",
+                                        "Bodega" => "var(--color-warning)",
+                                        _ => "var(--color-success)"
+                                    };
+                                }
+                                <span style="display:inline-flex;align-items:center;padding:4px 10px;
+                                             font-size:.75rem;font-weight:600;line-height:1;
+                                             border:1px solid @rolBadgeColor;background:@rolBadgeColor;
+                                             color:#fff;border-radius:var(--radius);">
+                                    @u.Rol
+                                </span>
+                            </td>
+                            <td>
+                                @{
+                                    var estadoColor = u.Activo
+                                        ? "var(--color-success)"
+                                        : "var(--color-danger)";
+                                }
+                                <span style="display:inline-flex;align-items:center;padding:4px 10px;
+                                             font-size:.75rem;font-weight:600;line-height:1;
+                                             border:1px solid @estadoColor;background:@estadoColor;
+                                             color:#fff;border-radius:var(--radius);">
+                                    @(u.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                                                                                                    <td style="font-size:.75rem;
+                                                                                                                       color:var(--color-text-muted);
+                                                                                                                       white-space:nowrap;">
+                                @(u.UltimoAcceso.HasValue
+                                                        ? u.UltimoAcceso.Value.ToString("dd/MM/yy HH:mm")
+                                                        : "Nunca")
+                    </td>
+                    <td style="font-size:.75rem;
+                                       color:var(--color-text-muted);
+                                       white-space:nowrap;">
+                        @u.FechaCreacion.ToString("dd/MM/yy")
+                    </td>
+                    <td>
+                        <div style="display:flex;gap:4px;">
+                            <button class="btn-icon"
+                                    title="Editar usuario"
+                                    onclick="editarUsuario(
+                                                '@u.Id',
+                                                '@u.NombreCompleto',
+                                                '@u.Rol',
+                                                @(u.Activo ? "true" : "false"))">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <form asp-action="Desactivar"
+                                  method="post"
+                                  style="display:none;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id"
+                                       value="@u.Id" />
+                            </form>
+                            <button class="btn-icon"
+                                    title="Desactivar"
+                                    onclick="confirmDelete('/Usuarios/Desactivar?id=@u.Id', '¿Desactivar a @u.NombreCompleto?')">
+                                <i class="bi bi-person-x"
+                                   style="color:var(--color-danger);"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                                }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<!-- ════════════════════════
+     MODAL: Crear usuario
+     ════════════════════════ -->
+<div class="modal fade" id="modalCrearUsuario"
+     tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i 
+                      style="color:var(--color-accent);"></i>
+                    Nuevo usuario
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Crear" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding:20px;">
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Nombre completo *
+                        </label>
+                        <input type="text" name="NombreCompleto"
+                               required class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Juan García López" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Correo corporativo *
+                        </label>
+                        <input type="email" name="Email"
+                               required class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="usuario@empresa.com" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Contraseña * (mín. 8 caracteres)
+                        </label>
+                        <div class="input-group">
+                            <input type="password" name="Password"
+                                   id="newPwd" required
+                                   class="form-control"
+                                   style="border-radius:var(--radius) 0 0 var(--radius);"
+                                   placeholder="••••••••" />
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    style="border-radius:0 var(--radius) var(--radius) 0;"
+                                    onclick="togglePwd('newPwd','eyeN')">
+                                <i class="bi bi-eye" id="eyeN"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Rol *
+                        </label>
+                        <div style="display:grid;
+                                    grid-template-columns:repeat(3,1fr);
+                                    gap:8px;">
+                            @{
+                                var roles = new[]
+                                {
+                                                        ("Administrador","bi-shield-fill",
+                                                        "var(--color-accent)"),
+                                                        ("Bodega","bi-box-seam",
+                                                        "var(--color-warning)"),
+                                                        ("Vendedor","bi-person",
+                                                        "var(--color-success)")
+                                                        };
+                            }
+                            @foreach (var (rval, rico, rcol) in roles)
+                            {
+                                <label style="cursor:pointer;text-align:center;">
+                                    <input type="radio" name="Rol"
+                                           value="@rval"
+                                           style="display:none;"
+                                           onchange="onRolChange(this)"
+                                           @(rval == "Vendedor" ? "checked" : "") />
+                                    <div class="rol-opt"
+                                         id="rol_@rval"
+                                         style="padding:10px 6px;
+                                                    border:2px solid var(--color-border);
+                                                    border-radius:var(--radius);
+                                                    transition:.15s;
+                                                    @(rval == "Vendedor"
+                                                                                             ? $"border-color:{rcol};background:var(--color-success-light);"
+                                                                                             : "")">
+                                    <i class="bi @rico"
+                                       style="font-size:1.125rem;
+                                                  color:@rcol;
+                                                  display:block;
+                                                  margin-bottom:4px;"></i>
+                                    <span style="font-size:.75rem;
+                                                     font-weight:500;">
+                                        @rval
+                                    </span>
+                                </div>
+                            </label>
+                                                        }
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);
+                            padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear usuario
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ════════════════════════
+     MODAL: Editar usuario
+     ════════════════════════ -->
+<div class="modal fade" id="modalEditarUsuario"
+     tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);
+                    border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);
+                        padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i class="bi bi-person-gear me-2"></i>
+                    Editar usuario
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="Editar" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editUserId" />
+                <div class="modal-body" style="padding:20px;">
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Nombre completo *
+                        </label>
+                        <input type="text" name="NombreCompleto"
+                               id="editNombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Rol
+                        </label>
+                        <select name="Rol" id="editRol"
+                                class="form-select"
+                                style="border-radius:var(--radius);
+                                       font-size:.875rem;">
+                            <option value="Administrador">Administrador</option>
+                            <option value="Bodega">Bodega</option>
+                            <option value="Vendedor">Vendedor</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Estado
+                        </label>
+                        <div style="display:flex;gap:8px;">
+                            <label style="cursor:pointer;flex:1;
+                                          text-align:center;">
+                                <input type="radio" name="Activo"
+                                       value="true" id="activoSi"
+                                       style="display:none;" />
+                                <div id="btnActivoSi"
+                                     style="padding:8px;
+                                            border:2px solid var(--color-border);
+                                            border-radius:var(--radius);
+                                            font-size:.875rem;
+                                            transition:.15s;">
+                                    <i class="bi bi-check-circle"
+                                       style="color:var(--color-success);"></i>
+                                    Activo
+                                </div>
+                            </label>
+                            <label style="cursor:pointer;flex:1;
+                                          text-align:center;">
+                                <input type="radio" name="Activo"
+                                       value="false" id="activoNo"
+                                       style="display:none;" />
+                                <div id="btnActivoNo"
+                                     style="padding:8px;
+                                            border:2px solid var(--color-border);
+                                            border-radius:var(--radius);
+                                            font-size:.875rem;
+                                            transition:.15s;">
+                                    <i class="bi bi-x-circle"
+                                       style="color:var(--color-danger);"></i>
+                                    Inactivo
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Nueva contraseña
+                            <span style="color:var(--color-text-muted);
+                                         font-weight:400;">
+                                (dejar vacío para no cambiar)
+                            </span>
+                        </label>
+                        <div class="input-group">
+                            <input type="password" name="NuevaPassword"
+                                   id="editPwd" class="form-control"
+                                   style="border-radius:var(--radius) 0 0 var(--radius);"
+                                   placeholder="••••••••" />
+                            <button type="button"
+                                    class="btn btn-outline-secondary"
+                                    style="border-radius:0 var(--radius) var(--radius) 0;"
+                                    onclick="togglePwd('editPwd','eyeE')">
+                                <i class="bi bi-eye" id="eyeE"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);
+                            padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Toggle password ──
+        function togglePwd(inputId, iconId) {
+            const i   = document.getElementById(inputId);
+            const ico = document.getElementById(iconId);
+            if (i.type === 'password') {
+                i.type = 'text';
+                ico.className = 'bi bi-eye-slash';
+            } else {
+                i.type = 'password';
+                ico.className = 'bi bi-eye';
+            }
+        }
+
+        // ── Selector visual de rol (crear) ──
+        const rolColors = {
+            Administrador: ['var(--color-accent)', 'var(--color-accent-light)'],
+            Bodega:        ['var(--color-warning)', 'var(--color-warning-light)'],
+            Vendedor:      ['var(--color-success)', 'var(--color-success-light)']
+        };
+
+        function onRolChange(radio) {
+            ['Administrador','Bodega','Vendedor'].forEach(r => {
+                const el = document.getElementById('rol_' + r);
+                if (!el) return;
+                el.style.borderColor = 'var(--color-border)';
+                el.style.background  = '';
+            });
+
+            const el = document.getElementById('rol_' + radio.value);
+            if (el && rolColors[radio.value]) {
+                el.style.borderColor = rolColors[radio.value][0];
+                el.style.background  = rolColors[radio.value][1];
+            }
+        }
+
+        // ── Abrir modal editar ──
+        function editarUsuario(id, nombre, rol, activo) {
+            document.getElementById('editUserId').value  = id;
+            document.getElementById('editNombre').value  = nombre;
+            document.getElementById('editRol').value     = rol;
+            document.getElementById('editPwd').value     = '';
+
+            // Estado activo/inactivo
+            document.getElementById('activoSi').checked = activo;
+            document.getElementById('activoNo').checked = !activo;
+
+            const si = document.getElementById('btnActivoSi');
+            const no = document.getElementById('btnActivoNo');
+
+            if (activo) {
+                si.style.borderColor = 'var(--color-success)';
+                si.style.background  = 'var(--color-success-light)';
+                no.style.borderColor = 'var(--color-border)';
+                no.style.background  = '';
+            } else {
+                no.style.borderColor = 'var(--color-danger)';
+                no.style.background  = 'var(--color-danger-light)';
+                si.style.borderColor = 'var(--color-border)';
+                si.style.background  = '';
+            }
+
+            // Click handlers estado
+            document.getElementById('activoSi').onchange = () => {
+                si.style.borderColor = 'var(--color-success)';
+                si.style.background  = 'var(--color-success-light)';
+                no.style.borderColor = 'var(--color-border)';
+                no.style.background  = '';
+            };
+            document.getElementById('activoNo').onchange = () => {
+                no.style.borderColor = 'var(--color-danger)';
+                no.style.background  = 'var(--color-danger-light)';
+                si.style.borderColor = 'var(--color-border)';
+                si.style.background  = '';
+            };
+
+            new bootstrap.Modal(
+                document.getElementById('modalEditarUsuario')).show();
+        }
+    </script>
+}

@@ -1,0 +1,780 @@
+﻿@model List<InventarioQR.ViewModels.BodegaArbolDto>
+@{
+    ViewData["Title"] = "Estructura de Bodega";
+    ViewData["Section"] = "Configuración";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Estructura de Bodega</div>
+        <div class="page-subtitle">
+            Jerarquía: Bodega → Zona → Estantería → Nivel → Posición
+        </div>
+    </div>
+    <button class="btn-primary-app"
+            onclick="abrirModal('modalCrearBodega')">
+        <i class="bi bi-plus-lg"></i> Agregar bodega
+    </button>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="bi bi-building"></i>
+            <p>Sin bodegas configuradas. Crea la primera.</p>
+        </div>
+    </div>
+}
+
+@foreach (var bodega in Model)
+{
+    <div class="card" style="margin-bottom:16px;">
+        <!-- Cabecera bodega -->
+        <div style="padding:16px 20px;border-bottom:1px solid var(--color-border);
+                        display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <button class="btn-icon" style="border:none;"
+                        onclick="toggleArbol('bod-@bodega.Id')">
+                    <i class="bi bi-chevron-down"
+                       id="ico-bod-@bodega.Id"
+                       style="transition:.2s;"></i>
+                </button>
+                <div>
+                    <div style="font-weight:700;font-size:.9375rem;">@bodega.Nombre</div>
+                    <div style="font-size:.75rem;color:var(--color-text-muted);">
+                        <span style="font-family:monospace;">@bodega.CodigoInterno</span>
+                        &nbsp;·&nbsp; @bodega.TotalPosiciones posiciones
+                        &nbsp;·&nbsp;
+                        <span style="color:var(--color-success);">
+                            @bodega.TotalConStock con stock
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <button class="btn-icon" title="Agregar zona"
+                        onclick="abrirModalZona(@bodega.Id,'@bodega.Nombre')">
+                    <i class="bi bi-plus-circle"
+                       style="color:var(--color-accent);"></i>
+                </button>
+                <button class="btn-icon" title="Editar bodega"
+                        onclick="editarBodega(@bodega.Id)">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <form asp-action="EliminarBodega" method="post" style="display:inline;">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@bodega.Id" />
+                    <button type="submit" class="btn-icon"
+                            onclick="return confirmPost(this.form, '¿Eliminar bodega @bodega.Nombre?')"
+                            title="Eliminar">
+                        <i class="bi bi-trash" style="color:var(--color-danger);"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Árbol colapsable -->
+        <div id="bod-@bodega.Id" style="padding:8px 16px 16px;">
+            @if (!bodega.Zonas.Any())
+            {
+                <div style="padding:12px 16px;font-size:.875rem;
+                                    color:var(--color-text-muted);">
+                    Sin zonas — agrega una con el botón +
+                </div>
+            }
+
+            @foreach (var zona in bodega.Zonas)
+            {
+                <div style="margin-left:20px;margin-top:8px;">
+                    <!-- Zona -->
+                    <div style="display:flex;align-items:center;gap:8px;
+                                        padding:8px 10px;background:var(--color-border-light);
+                                        border-radius:var(--radius);margin-bottom:4px;">
+                        <button class="btn-icon" style="border:none;width:24px;height:24px;"
+                                onclick="toggleArbol('zon-@zona.Id')">
+                            <i class="bi bi-chevron-right"
+                               id="ico-zon-@zona.Id"
+                               style="font-size:.75rem;transition:.2s;"></i>
+                        </button>
+                        <i class="bi bi-diagram-3"
+                           style="color:var(--color-accent);"></i>
+                        <span style="font-weight:600;font-size:.875rem;">@zona.Nombre</span>
+                        <span style="font-family:monospace;font-size:.75rem;
+                                             color:var(--color-text-muted);">
+                            @zona.CodigoInterno
+                        </span>
+                        <div style="margin-left:auto;display:flex;gap:4px;">
+                            <button class="btn-icon"
+                                    style="width:26px;height:26px;"
+                                    title="Agregar estantería"
+                                    onclick="abrirModalEstanteria(@zona.Id,'@zona.Nombre')">
+                                <i class="bi bi-plus"
+                                   style="color:var(--color-accent);font-size:.8rem;"></i>
+                            </button>
+                            <button class="btn-icon"
+                                    style="width:26px;height:26px;"
+                                    title="Editar zona"
+                                    onclick="editarZona(@zona.Id)">
+                                <i class="bi bi-pencil" style="font-size:.75rem;"></i>
+                            </button>
+                            <form asp-action="EliminarZona" method="post"
+                                  style="display:inline;">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@zona.Id" />
+                                <button type="submit" class="btn-icon"
+                                        style="width:26px;height:26px;"
+                                        onclick="return confirmPost(this.form, '¿Eliminar zona?')">
+                                    <i class="bi bi-trash"
+                                       style="color:var(--color-danger);font-size:.75rem;">
+                                    </i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Estanterías -->
+                    <div id="zon-@zona.Id" style="display:none;margin-left:24px;">
+                        @foreach (var est in zona.Estanterias)
+                        {
+                            <div style="margin-top:4px;">
+                                <div style="display:flex;align-items:center;gap:8px;
+                                                        padding:7px 10px;
+                                                        border-left:2px solid var(--color-border);
+                                                        margin-bottom:2px;">
+                                    <button class="btn-icon"
+                                            style="border:none;width:22px;height:22px;"
+                                            onclick="toggleArbol('est-@est.Id')">
+                                        <i class="bi bi-chevron-right"
+                                           id="ico-est-@est.Id"
+                                           style="font-size:.7rem;transition:.2s;"></i>
+                                    </button>
+                                    <i class="bi bi-grid-3x3"
+                                       style="color:var(--color-warning);font-size:.875rem;">
+                                    </i>
+                                    <span style="font-weight:500;font-size:.8125rem;">
+                                        @est.Nombre
+                                    </span>
+                                    <span style="font-family:monospace;font-size:.7rem;
+                                                             color:var(--color-text-muted);">
+                                        @est.CodigoInterno
+                                    </span>
+                                    <div style="margin-left:auto;display:flex;gap:4px;">
+                                        <button class="btn-icon"
+                                                style="width:24px;height:24px;"
+                                                title="Agregar nivel"
+                                                onclick="abrirModalNivel(@est.Id,'@est.Nombre')">
+                                            <i class="bi bi-plus"
+                                               style="color:var(--color-accent);
+                                                                  font-size:.75rem;"></i>
+                                        </button>
+                                        <form asp-action="EliminarEstanteria"
+                                              method="post" style="display:inline;">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@est.Id" />
+                                            <button type="submit" class="btn-icon"
+                                                    style="width:24px;height:24px;"
+                                                    onclick="return confirmPost(this.form, '¿Eliminar estantería?')">
+                                                <i class="bi bi-trash"
+                                                   style="color:var(--color-danger);
+                                                                      font-size:.7rem;"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Niveles -->
+                                <div id="est-@est.Id"
+                                     style="display:none;margin-left:32px;">
+                                    @foreach (var niv in est.Niveles)
+                                    {
+                                        <div style="margin-top:2px;">
+                                            <div style="display:flex;align-items:center;
+                                                                        gap:8px;padding:6px 10px;
+                                                                        border-left:2px solid
+                                                                        var(--color-border-light);">
+                                                <button class="btn-icon"
+                                                        style="border:none;width:20px;height:20px;"
+                                                        onclick="toggleArbol('niv-@niv.Id')">
+                                                    <i class="bi bi-chevron-right"
+                                                       id="ico-niv-@niv.Id"
+                                                       style="font-size:.65rem;transition:.2s;">
+                                                    </i>
+                                                </button>
+                                                <i class="bi bi-layers"
+                                                   style="color:var(--color-info);
+                                                                          font-size:.8125rem;"></i>
+                                                <span style="font-size:.8125rem;
+                                                                             font-weight:500;">
+                                                    @niv.Nombre
+                                                </span>
+                                                <span style="font-family:monospace;
+                                                                             font-size:.6875rem;
+                                                                             color:var(--color-text-muted);">
+                                                    @niv.CodigoInterno
+                                                </span>
+                                                <div style="margin-left:auto;
+                                                                            display:flex;gap:4px;">
+                                                    <button class="btn-icon"
+                                                            style="width:22px;height:22px;"
+                                                            title="Agregar posición"
+                                                            onclick="abrirModalPosicion(
+                                                                                @niv.Id,'@niv.Nombre')">
+                                                        <i class="bi bi-plus"
+                                                           style="color:var(--color-accent);
+                                                                                  font-size:.7rem;"></i>
+                                                    </button>
+                                                    <form asp-action="EliminarNivel"
+                                                          method="post"
+                                                          style="display:inline;">
+                                                        @Html.AntiForgeryToken()
+                                                        <input type="hidden" name="id"
+                                                               value="@niv.Id" />
+                                                        <button type="submit"
+                                                                class="btn-icon"
+                                                                style="width:22px;height:22px;"
+                                                                onclick="return confirmPost(this.form, '¿Eliminar nivel?')">
+                                                            <i class="bi bi-trash"
+                                                               style="color:var(--color-danger);
+                                                                                      font-size:.65rem;">
+                                                            </i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+
+                                            <!-- Posiciones -->
+                                            <div id="niv-@niv.Id"
+                                                 style="display:none;margin-left:28px;
+                                                                        padding:4px 0;">
+                                                @foreach (var pos in niv.Posiciones)
+                                                {
+                                                    <div style="display:flex;
+                                                                                    align-items:center;
+                                                                                    gap:8px;padding:5px 10px;
+                                                                                    font-size:.8125rem;">
+                                                        <i class="bi bi-geo"
+                                                           style="color:var(--color-text-muted);
+                                                                                      font-size:.75rem;"></i>
+                                                        <span>@pos.Nombre</span>
+                                                        <span style="font-family:monospace;
+                                                                                         font-size:.6875rem;
+                                                                                         color:var(--color-text-muted);">
+                                                            @pos.CodigoInterno
+                                                        </span>
+                                                        <span style="margin-left:auto;
+                                                                                         font-size:.75rem;
+                                                                                         font-weight:600;
+                                                                                         color:@(pos.StockDisponible > 0
+                                                                                                                                      ? "var(--color-success)"
+                                                                                                                                      : "var(--color-text-muted)");">
+                                        @pos.StockDisponible uds
+                                    </span>
+                                    <form asp-action="EliminarPosicion"
+                                          method="post"
+                                          style="display:inline;">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id"
+                                               value="@pos.Id" />
+                                        <button type="submit"
+                                                class="btn-icon"
+                                                style="width:20px;height:20px;"
+                                                onclick="return confirmPost(this.form, '¿Eliminar posición?')">
+                                            <i class="bi bi-trash"
+                                               style="color:var(--color-danger);
+                                                                          font-size:.6rem;">
+                                            </i>
+                                        </button>
+                                    </form>
+                                </div>
+                                                                }
+                                                @if (!niv.Posiciones.Any())
+                                                {
+                                                    <div style="font-size:.8125rem;
+                                                                                    color:var(--color-text-muted);
+                                                                                    padding:4px 10px;">
+                                                        Sin posiciones
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- ══════════════════════════════════════════
+                    MODALES 
+     ══════════════════════════════════════════ -->
+<!-- Modal: Crear Bodega -->
+<div class="modal fade" id="modalCrearBodega" tabindex="-1"
+     aria-labelledby="labelCrearBodega" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content" style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold" id="labelCrearBodega">
+                    <i></i>Nueva bodega
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CrearBodega" method="post">
+                @Html.AntiForgeryToken()
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Nombre *
+                        </label>
+                        <input type="text" name="Nombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Bodega Central" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Código interno
+                            <span style="color:var(--color-text-muted);
+                                         font-weight:400;">(auto si vacío)</span>
+                        </label>
+                        <input type="text" name="CodigoInterno"
+                               class="form-control"
+                               style="border-radius:var(--radius);font-family:monospace;"
+                               placeholder="BOD-001" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Ubicación física
+                        </label>
+                        <input type="text" name="Ubicacion"
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Km 12 carretera norte" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Descripción
+                        </label>
+                        <textarea name="Descripcion" class="form-control" rows="2"
+                                  style="border-radius:var(--radius);resize:none;"
+                                  placeholder="Opcional..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear bodega
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Bodega -->
+<div class="modal fade" id="modalEditarBodega" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:480px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i></i>Editar bodega
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="EditarBodega" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editBodegaId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" id="editBodegaNombre"
+                               required class="form-control"
+                               style="border-radius:var(--radius);" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Ubicación
+                        </label>
+                        <input type="text" name="Ubicacion" id="editBodegaUbicacion"
+                               class="form-control" style="border-radius:var(--radius);" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Descripción
+                        </label>
+                        <textarea name="Descripcion" id="editBodegaDesc"
+                                  class="form-control" rows="2"
+                                  style="border-radius:var(--radius);resize:none;">
+                        </textarea>
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Guardar cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Zona -->
+<div class="modal fade" id="modalCrearZona" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:440px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i 
+                       style="color:var(--color-accent);"></i>
+                    Nueva zona en
+                    <span id="labelBodegaZona"
+                          style="color:var(--color-accent);"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CrearZona" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="BodegaId" id="nuevaZonaBodegaId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Zona A" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Código interno
+                        </label>
+                        <input type="text" name="CodigoInterno"
+                               class="form-control"
+                               style="border-radius:var(--radius);font-family:monospace;"
+                               placeholder="ZN-A1" />
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear zona
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Editar Zona -->
+<div class="modal fade" id="modalEditarZona" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:440px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i></i>Editar zona
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="EditarZona" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="Id" id="editZonaId" />
+                <input type="hidden" name="BodegaId" id="editZonaBodegaId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" id="editZonaNombre"
+                               required class="form-control"
+                               style="border-radius:var(--radius);" />
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Estantería -->
+<div class="modal fade" id="modalCrearEstanteria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:440px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i 
+                       style="color:var(--color-warning);"></i>
+                    Nueva estantería en
+                    <span id="labelZonaEst"
+                          style="color:var(--color-warning);"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CrearEstanteria" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="ZonaId" id="nuevaEstZonaId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Estantería 1" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Código interno
+                        </label>
+                        <input type="text" name="CodigoInterno"
+                               class="form-control"
+                               style="border-radius:var(--radius);font-family:monospace;"
+                               placeholder="EST-01" />
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Nivel -->
+<div class="modal fade" id="modalCrearNivel" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:440px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i 
+                       style="color:var(--color-info);"></i>
+                    Nuevo nivel en
+                    <span id="labelEstNiv"
+                          style="color:var(--color-info);"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CrearNivel" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="EstanteriaId" id="nuevoNivEstId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: Nivel 1 / Piso A" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Código interno
+                        </label>
+                        <input type="text" name="CodigoInterno"
+                               class="form-control"
+                               style="border-radius:var(--radius);font-family:monospace;"
+                               placeholder="NV-01" />
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Crear Posición -->
+<div class="modal fade" id="modalCrearPosicion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered"
+         style="margin-top:60px;max-width:440px;">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);">
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;">
+                <h6 class="modal-title fw-bold">
+                    <i
+                       style="color:var(--color-success);"></i>
+                    Nueva posición en
+                    <span id="labelNivPos"
+                          style="color:var(--color-success);"></span>
+                </h6>
+                <button type="button" class="btn-close btn-close-sm"
+                        data-bs-dismiss="modal"></button>
+            </div>
+            <form asp-action="CrearPosicion" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="NivelId" id="nuevaPosNivId" />
+                <div class="modal-body" style="padding:20px;">
+                    <div class="mb-3">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">Nombre *</label>
+                        <input type="text" name="Nombre" required
+                               class="form-control"
+                               style="border-radius:var(--radius);"
+                               placeholder="Ej: A1 / P-001" />
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label"
+                               style="font-size:.8125rem;font-weight:500;">
+                            Código interno
+                        </label>
+                        <input type="text" name="CodigoInterno"
+                               class="form-control"
+                               style="border-radius:var(--radius);font-family:monospace;"
+                               placeholder="POS-001" />
+                    </div>
+                </div>
+                <div class="modal-footer"
+                     style="border-top:1px solid var(--color-border);padding:12px 20px;">
+                    <button type="button" class="btn-secondary-app"
+                            data-bs-dismiss="modal">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn-primary-app">
+                        <i class="bi bi-check-lg"></i> Crear posición
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // ── Árbol colapsable ──
+        function toggleArbol(id) {
+            const el  = document.getElementById(id);
+            const ico = document.getElementById('ico-' + id);
+            if (!el) return;
+
+            const isOpen = el.style.display !== 'none';
+            el.style.display = isOpen ? 'none' : 'block';
+
+            if (ico) {
+                ico.style.transform = isOpen ? '' : 'rotate(90deg)';
+            }
+        }
+
+        // ── Abrir modales ──
+        function abrirModal(id) {
+            new bootstrap.Modal(document.getElementById(id)).show();
+        }
+
+        function abrirModalZona(bodegaId, bodegaNombre) {
+            document.getElementById('nuevaZonaBodegaId').value = bodegaId;
+            document.getElementById('labelBodegaZona').textContent = bodegaNombre;
+            abrirModal('modalCrearZona');
+        }
+
+        function abrirModalEstanteria(zonaId, zonaNombre) {
+            document.getElementById('nuevaEstZonaId').value = zonaId;
+            document.getElementById('labelZonaEst').textContent = zonaNombre;
+            abrirModal('modalCrearEstanteria');
+        }
+
+        function abrirModalNivel(estId, estNombre) {
+            document.getElementById('nuevoNivEstId').value = estId;
+            document.getElementById('labelEstNiv').textContent = estNombre;
+            abrirModal('modalCrearNivel');
+        }
+
+        function abrirModalPosicion(nivId, nivNombre) {
+            document.getElementById('nuevaPosNivId').value = nivId;
+            document.getElementById('labelNivPos').textContent = nivNombre;
+            abrirModal('modalCrearPosicion');
+        }
+
+        // ── Editar bodega (carga datos via AJAX) ──
+        async function editarBodega(id) {
+            const res  = await fetch(`/Bodega/GetBodega/${id}`);
+            const data = await res.json();
+            document.getElementById('editBodegaId').value       = data.id;
+            document.getElementById('editBodegaNombre').value   = data.nombre;
+            document.getElementById('editBodegaUbicacion').value= data.ubicacion ?? '';
+            document.getElementById('editBodegaDesc').value     = data.descripcion ?? '';
+            abrirModal('modalEditarBodega');
+        }
+
+        // ── Editar zona ──
+        async function editarZona(id) {
+            const res  = await fetch(`/Bodega/GetZona/${id}`);
+            const data = await res.json();
+            document.getElementById('editZonaId').value      = data.id;
+            document.getElementById('editZonaBodegaId').value= data.bodegaId;
+            document.getElementById('editZonaNombre').value  = data.nombre;
+            abrirModal('modalEditarZona');
+        }
+    </script>
+}

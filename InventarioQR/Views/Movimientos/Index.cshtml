@@ -1,0 +1,451 @@
+﻿@using X.PagedList
+@model X.PagedList.IPagedList<InventarioQR.ViewModels.MovimientoListaDto>
+@{
+    ViewData["Title"] = "Movimientos";
+    ViewData["Section"] = "Operaciones";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Movimientos</div>
+        <div class="page-subtitle">Historial completo — @Model.TotalItemCount registros</div>
+    </div>
+    <button class="btn-primary-app" onclick="abrirModalMovimiento()">
+        <i class="bi bi-plus-lg"></i> Nuevo movimiento
+    </button>
+</div>
+
+<!-- Filtros tipo -->
+<div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+    @{
+        var tipos = new[] { "", "Entrada", "Salida", "Transferencia", "Ajuste" };
+        var labels = new[] { "Todos", "Entradas", "Salidas", "Transferencias", "Ajustes" };
+    }
+    @for (int t = 0; t < tipos.Length; t++)
+    {
+        var isActive = (ViewBag.Tipo as string ?? "") == tipos[t];
+        <a href="?tipo=@tipos[t]&busqueda=@ViewBag.Busqueda"
+           class="btn-secondary-app"
+           style="font-size:.8125rem;padding:6px 12px;
+                      @(isActive ? "background:#0e7490;color:#fff;border-color:#0e7490;" : "")">
+            @labels[t]
+        </a>
+    }
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <form method="get" style="display:flex;gap:8px;align-items:center;">
+            <input type="hidden" name="tipo" value="@ViewBag.Tipo" />
+            <div style="position:relative;">
+                <i class="bi bi-search" style="position:absolute;left:10px;top:50%;
+                   transform:translateY(-50%);color:var(--color-text-muted);
+                   font-size:.8125rem;"></i>
+                <input type="text" name="busqueda" value="@ViewBag.Busqueda"
+                       placeholder="Buscar producto o usuario..."
+                       style="padding:7px 12px 7px 30px;border:1px solid var(--color-border);
+                              border-radius:var(--radius);font-size:.8125rem;
+                              font-family:inherit;width:240px;" />
+            </div>
+            <button type="submit" class="btn-secondary-app"
+                    style="padding:7px 12px;font-size:.8125rem;">
+                <i class="bi bi-search"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="table-wrapper">
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <i class="bi bi-arrow-left-right"></i>
+                <p>Sin movimientos registrados.</p>
+            </div>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Tipo</th>
+                        <th>Producto</th>
+                        <th>Origen</th>
+                        <th>Destino</th>
+                        <th>Cantidad</th>
+                        <th>Usuario</th>
+                        <th>Motivo</th>
+                        <th>Fecha</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model)
+                    {
+                        <tr>
+                            <td style="color:var(--color-text-muted);font-size:.75rem;">
+                                #@m.Id
+                            </td>
+                            <td>
+                                @{
+                                    var tipoColor = m.Tipo switch
+                                    {
+                                        "Entrada" => "var(--color-success)",
+                                        "Salida" => "var(--color-danger)",
+                                        "Transferencia" => "var(--color-info)",
+                                        _ => "var(--color-warning)"
+                                    };
+                                }
+                                <span style="display:inline-flex;align-items:center;padding:4px 10px;
+                                             font-size:.75rem;font-weight:600;line-height:1;
+                                             border:1px solid @tipoColor;background:@tipoColor;
+                                             color:#fff;border-radius:var(--radius);">
+                                    @m.Tipo
+                                </span>
+                            </td>
+                            <td>
+                                <div style="font-weight:500;font-size:.875rem;">@m.ProductoNombre</div>
+                                <div style="font-size:.75rem;font-family:monospace;
+                                                    color:var(--color-text-muted);">
+                                    @m.ProductoSKU
+                                </div>
+                            </td>
+                            <td style="font-size:.8125rem;color:var(--color-text-secondary);
+                                               max-width:140px;white-space:nowrap;overflow:hidden;
+                                               text-overflow:ellipsis;" title="@m.UbicacionOrigen">
+                                @(m.UbicacionOrigen ?? "—")
+                            </td>
+                            <td style="font-size:.8125rem;color:var(--color-text-secondary);
+                                               max-width:140px;white-space:nowrap;overflow:hidden;
+                                               text-overflow:ellipsis;" title="@m.UbicacionDestino">
+                                @(m.UbicacionDestino ?? "—")
+                            </td>
+                            <td style="font-weight:700;font-size:.9375rem;">@m.Cantidad</td>
+                            <td style="font-size:.8125rem;color:var(--color-text-secondary);">
+                                @m.NombreUsuario
+                            </td>
+                            <td style="font-size:.8125rem;color:var(--color-text-muted);
+                                               max-width:120px;white-space:nowrap;overflow:hidden;
+                                               text-overflow:ellipsis;" title="@m.Motivo">
+                                @(m.Motivo ?? "—")
+                            </td>
+                            <td style="font-size:.75rem;color:var(--color-text-muted);white-space:nowrap;">
+                                @m.FechaHora.ToString("dd/MM/yy HH:mm")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Model.PageCount > 1)
+            {
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                                    padding:12px 16px;border-top:1px solid var(--color-border);">
+                    <span style="font-size:.8125rem;color:var(--color-text-muted);">
+                        Página @Model.PageNumber de @Model.PageCount
+                    </span>
+                    <div style="display:flex;gap:4px;">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a href="?pagina=@(Model.PageNumber - 1)&tipo=@ViewBag.Tipo&busqueda=@ViewBag.Busqueda"
+                               class="btn-secondary-app" style="padding:5px 10px;">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        }
+                        @if (Model.HasNextPage)
+                        {
+                            <a href="?pagina=@(Model.PageNumber + 1)&tipo=@ViewBag.Tipo&busqueda=@ViewBag.Busqueda"
+                               class="btn-secondary-app" style="padding:5px 10px;">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     MODAL — REGISTRAR MOVIMIENTO
+══════════════════════════════════════════════ -->
+<div class="modal fade" id="modalMovimiento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content"
+             style="border-radius:var(--radius);border:1px solid var(--color-border);
+                    box-shadow:var(--shadow-md);">
+
+            <!-- Header -->
+            <div class="modal-header"
+                 style="border-bottom:1px solid var(--color-border);padding:16px 20px;
+                        display:flex;align-items:center;justify-content:space-between;">
+                <div>
+                    <div style="font-weight:600;font-size:.9375rem;">Registrar movimiento</div>
+                    <div style="font-size:.8125rem;color:var(--color-text-muted);">
+                        Todo movimiento genera impacto inmediato en el inventario
+                    </div>
+                </div>
+                <button type="button" class="btn-icon" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+
+            <!-- Body -->
+            <div class="modal-body" style="padding:20px;">
+                <form id="formMovimiento" asp-action="Registrar" asp-controller="Movimientos"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Tipo de movimiento -->
+                    <div class="card" style="margin-bottom:16px;">
+                        <div class="card-header">
+                            <span class="card-title">Tipo de movimiento</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                                @{
+                                    var tiposForm = new[]
+                                    {
+                                                                ("Entrada",       "bi-arrow-down-circle", "var(--color-success)",  "var(--color-success-light)"),
+                                                                ("Salida",        "bi-arrow-up-circle",   "var(--color-danger)",   "var(--color-danger-light)"),
+                                                                ("Transferencia", "bi-arrow-left-right",  "var(--color-info)",     "var(--color-info-light)"),
+                                                                ("Ajuste",        "bi-sliders",           "var(--color-warning)",  "var(--color-warning-light)")
+                                                                };
+                                }
+                                @foreach (var (val, ico, col, bg) in tiposForm)
+                                {
+                                    <label style="cursor:pointer;text-align:center;">
+                                        <input type="radio" name="Tipo" value="@val"
+                                               style="display:none;"
+                                               onchange="onTipoChange('@val')" />
+                                        <div class="tipo-btn" id="mTipo_@val"
+                                             style="padding:14px 8px;border:2px solid var(--color-border);
+                                                        border-radius:var(--radius);transition:all .15s;">
+                                            <i class="bi @ico"
+                                               style="font-size:1.375rem;color:@col;
+                                                          display:block;margin-bottom:4px;"></i>
+                                            <span style="font-size:.75rem;font-weight:500;">@val</span>
+                                        </div>
+                                    </label>
+                                }
+                            </div>
+                            <span id="tipoError"
+                                  style="font-size:.75rem;color:var(--color-danger);
+                                         display:none;margin-top:8px;">
+                                El tipo de movimiento es requerido.
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Producto -->
+                    <div class="card" style="margin-bottom:16px;">
+                        <div class="card-header">
+                            <span class="card-title">Producto</span>
+                        </div>
+                        <div class="card-body">
+                            <select name="ProductoId"
+                                    style="width:100%;padding:9px 12px;
+                                           border:1px solid var(--color-border);
+                                           border-radius:var(--radius);font-size:.875rem;
+                                           font-family:inherit;background:#fff;" required>
+                                <option value="">— Selecciona un producto —</option>
+                                @if (ViewBag.Productos != null)
+                                {
+                                    @foreach (var p in ViewBag.Productos)
+                                    {
+                                        <option value="@p.Id">@p.Texto</option>
+                                    }
+                                }
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Ubicaciones -->
+                    <div class="card" style="margin-bottom:16px;">
+                        <div class="card-header">
+                            <span class="card-title">Ubicaciones</span>
+                        </div>
+                        <div class="card-body" style="display:flex;flex-direction:column;gap:14px;">
+
+                            <div id="mCampoOrigen">
+                                <label style="font-size:.8125rem;font-weight:500;
+                                              display:block;margin-bottom:6px;">
+                                    Posición origen
+                                    <span style="color:var(--color-text-muted);
+                                                 font-weight:400;font-size:.75rem;">
+                                        (Salida / Transferencia)
+                                    </span>
+                                </label>
+                                <select name="PosicionOrigenId"
+                                        style="width:100%;padding:9px 12px;
+                                               border:1px solid var(--color-border);
+                                               border-radius:var(--radius);font-size:.875rem;
+                                               font-family:inherit;background:#fff;">
+                                    <option value="">— Sin origen —</option>
+                                    @if (ViewBag.Posiciones != null)
+                                    {
+                                        @foreach (var pos in ViewBag.Posiciones)
+                                        {
+                                            <option value="@pos.Id">@pos.Texto</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                            <div id="mCampoDestino">
+                                <label style="font-size:.8125rem;font-weight:500;
+                                              display:block;margin-bottom:6px;">
+                                    Posición destino
+                                    <span style="color:var(--color-text-muted);
+                                                 font-weight:400;font-size:.75rem;">
+                                        (Entrada / Transferencia)
+                                    </span>
+                                </label>
+                                <select name="PosicionDestinoId"
+                                        style="width:100%;padding:9px 12px;
+                                               border:1px solid var(--color-border);
+                                               border-radius:var(--radius);font-size:.875rem;
+                                               font-family:inherit;background:#fff;">
+                                    <option value="">— Sin destino —</option>
+                                    @if (ViewBag.Posiciones != null)
+                                    {
+                                        @foreach (var pos in ViewBag.Posiciones)
+                                        {
+                                            <option value="@pos.Id">@pos.Texto</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Cantidad y motivo -->
+                    <div class="card" style="margin-bottom:16px;">
+                        <div class="card-header">
+                            <span class="card-title">Detalles</span>
+                        </div>
+                        <div class="card-body"
+                             style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+                            <div>
+                                <label style="font-size:.8125rem;font-weight:500;
+                                              display:block;margin-bottom:6px;">Cantidad *</label>
+                                <input name="Cantidad" type="number" min="1"
+                                       class="form-control" placeholder="0"
+                                       style="border-radius:var(--radius);font-size:1.125rem;
+                                              font-weight:600;text-align:center;" required />
+                            </div>
+                            <div>
+                                <label style="font-size:.8125rem;font-weight:500;
+                                              display:block;margin-bottom:6px;">
+                                    Motivo / Referencia
+                                </label>
+                                <input name="Motivo" class="form-control"
+                                       placeholder="Ej: Orden #1234, ajuste físico..."
+                                       style="border-radius:var(--radius);" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aviso -->
+                    <div class="alert-app warning">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span>
+                            Este movimiento no podrá editarse una vez registrado.
+                            Asegúrate de que los datos sean correctos.
+                        </span>
+                    </div>
+
+                </form>
+            </div>
+
+            <!-- Footer -->
+            <div class="modal-footer"
+                 style="border-top:1px solid var(--color-border);padding:16px 20px;
+                        display:flex;gap:12px;justify-content:flex-end;">
+                <button type="button" class="btn-secondary-app" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="submit" form="formMovimiento" class="btn-primary-app"
+                        onclick="return validarFormMovimiento()">
+                    <i class="bi bi-check-lg"></i> Registrar movimiento
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        // ═══════════════════════════════════════════
+        // COLORES POR TIPO
+        // ═══════════════════════════════════════════
+        const tipoColors = {
+            Entrada:       ['var(--color-success)', 'var(--color-success-light)'],
+            Salida:        ['var(--color-danger)',  'var(--color-danger-light)'],
+            Transferencia: ['var(--color-info)',    'var(--color-info-light)'],
+            Ajuste:        ['var(--color-warning)', 'var(--color-warning-light)']
+        };
+
+        function onTipoChange(tipo) {
+            // Reset todos
+            ['Entrada','Salida','Transferencia','Ajuste'].forEach(t => {
+                const el = document.getElementById('mTipo_' + t);
+                if (!el) return;
+                el.style.borderColor = 'var(--color-border)';
+                el.style.background  = '';
+            });
+            // Activar seleccionado
+            const el = document.getElementById('mTipo_' + tipo);
+            if (el && tipoColors[tipo]) {
+                el.style.borderColor = tipoColors[tipo][0];
+                el.style.background  = tipoColors[tipo][1];
+            }
+            // Ocultar error si estaba visible
+            document.getElementById('tipoError').style.display = 'none';
+        }
+
+        // ═══════════════════════════════════════════
+        // ABRIR / LIMPIAR MODAL
+        // ═══════════════════════════════════════════
+        function abrirModalMovimiento() {
+            // Limpiar formulario
+            document.getElementById('formMovimiento').reset();
+
+            // Reset estilos de tipo
+            ['Entrada','Salida','Transferencia','Ajuste'].forEach(t => {
+                const el = document.getElementById('mTipo_' + t);
+                if (el) { el.style.borderColor = 'var(--color-border)'; el.style.background = ''; }
+            });
+            document.getElementById('tipoError').style.display = 'none';
+
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('modalMovimiento')
+            ).show();
+        }
+
+        // Limpiar también al cerrar con X o clic fuera
+        document.getElementById('modalMovimiento').addEventListener('hidden.bs.modal', () => {
+            document.getElementById('formMovimiento').reset();
+            ['Entrada','Salida','Transferencia','Ajuste'].forEach(t => {
+                const el = document.getElementById('mTipo_' + t);
+                if (el) { el.style.borderColor = 'var(--color-border)'; el.style.background = ''; }
+            });
+            document.getElementById('tipoError').style.display = 'none';
+        });
+
+        // ═══════════════════════════════════════════
+        // VALIDAR ANTES DE ENVIAR
+        // ═══════════════════════════════════════════
+        function validarFormMovimiento() {
+            const tipoSeleccionado = document.querySelector('#formMovimiento input[name="Tipo"]:checked');
+            if (!tipoSeleccionado) {
+                document.getElementById('tipoError').style.display = 'block';
+                return false;
+            }
+            return true;
+        }
+    </script>
+}

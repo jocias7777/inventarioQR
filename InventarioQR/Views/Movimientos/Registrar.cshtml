@@ -1,0 +1,233 @@
+﻿@model InventarioQR.ViewModels.MovimientoCrearViewModel
+@{
+    ViewData["Title"] = "Registrar Movimiento";
+    ViewData["Section"] = "Operaciones › Movimientos";
+}
+
+<div class="page-header">
+    <div>
+        <div class="page-title">Registrar movimiento</div>
+        <div class="page-subtitle">
+            Todo movimiento genera impacto inmediato en el inventario
+        </div>
+    </div>
+    <a href="/Movimientos" class="btn-secondary-app">
+        <i class="bi bi-arrow-left"></i> Volver
+    </a>
+</div>
+
+<div style="max-width:640px;">
+    <form asp-action="Registrar" method="post">
+        @Html.AntiForgeryToken()
+
+        <!-- Selector de tipo -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">Tipo de movimiento</span>
+            </div>
+            <div class="card-body">
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+                    @{
+                        var tipos = new[]
+                        {
+                                        ("Entrada",       "bi-arrow-down-circle", "var(--color-success)",
+                                        "var(--color-success-light)"),
+                                        ("Salida",        "bi-arrow-up-circle",   "var(--color-danger)",
+                                        "var(--color-danger-light)"),
+                                        ("Transferencia", "bi-arrow-left-right",  "var(--color-info)",
+                                        "var(--color-info-light)"),
+                                        ("Ajuste",        "bi-sliders",           "var(--color-warning)",
+                                        "var(--color-warning-light)")
+                                        };
+                    }
+                    @foreach (var (val, ico, col, bg) in tipos)
+                    {
+                        <label style="cursor:pointer;text-align:center;">
+                            <input type="radio" name="Tipo" value="@val"
+                                   style="display:none;"
+                                   onchange="onTipoChange('@val')"
+                                   @(Model.Tipo == val ? "checked" : "") />
+                            <div class="tipo-btn" id="tipo_@val"
+                                 style="padding:14px 8px;border:2px solid var(--color-border);
+                                            border-radius:var(--radius);transition:all .15s;
+                                            @(Model.Tipo == val
+                                                                             ? $"border-color:{col};background:{bg};" : "")">
+                            <i class="bi @ico"
+                               style="font-size:1.375rem;color:@col;display:block;
+                                          margin-bottom:4px;"></i>
+                            <span style="font-size:.75rem;font-weight:500;">@val</span>
+                        </div>
+                    </label>
+                                        }
+                </div>
+                <span asp-validation-for="Tipo"
+                      style="font-size:.75rem;color:var(--color-danger);display:block;
+                             margin-top:8px;"></span>
+            </div>
+        </div>
+
+        <!-- Producto -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">Producto</span>
+            </div>
+            <div class="card-body">
+                <select asp-for="ProductoId"
+                        style="width:100%;padding:9px 12px;
+                               border:1px solid var(--color-border);
+                               border-radius:var(--radius);font-size:.875rem;
+                               font-family:inherit;background:#fff;">
+                    <option value="">— Selecciona un producto —</option>
+                    @foreach (var p in Model.Productos)
+                    {
+                        <option value="@p.Id"
+                                selected="@(Model.ProductoId == p.Id)">
+                            @p.Texto
+                        </option>
+                    }
+                </select>
+                <span asp-validation-for="ProductoId"
+                      style="font-size:.75rem;color:var(--color-danger);"></span>
+            </div>
+        </div>
+
+        <!-- Ubicaciones -->
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header">
+                <span class="card-title">Ubicaciones</span>
+            </div>
+            <div class="card-body"
+                 style="display:flex;flex-direction:column;gap:14px;">
+
+                <div id="campoOrigen">
+                    <label style="font-size:.8125rem;font-weight:500;
+                                  display:block;margin-bottom:6px;">
+                        Posición origen
+                        <span style="color:var(--color-text-muted);
+                                     font-weight:400;font-size:.75rem;">
+                            (Salida / Transferencia)
+                        </span>
+                    </label>
+                    <select asp-for="PosicionOrigenId"
+                            style="width:100%;padding:9px 12px;
+                                   border:1px solid var(--color-border);
+                                   border-radius:var(--radius);font-size:.875rem;
+                                   font-family:inherit;background:#fff;">
+                        <option value="">— Sin origen —</option>
+                        @foreach (var pos in Model.Posiciones)
+                        {
+                            <option value="@pos.Id">@pos.Texto</option>
+                        }
+                    </select>
+                </div>
+
+                <div id="campoDestino">
+                    <label style="font-size:.8125rem;font-weight:500;
+                                  display:block;margin-bottom:6px;">
+                        Posición destino
+                        <span style="color:var(--color-text-muted);
+                                     font-weight:400;font-size:.75rem;">
+                            (Entrada / Transferencia)
+                        </span>
+                    </label>
+                    <select asp-for="PosicionDestinoId"
+                            style="width:100%;padding:9px 12px;
+                                   border:1px solid var(--color-border);
+                                   border-radius:var(--radius);font-size:.875rem;
+                                   font-family:inherit;background:#fff;">
+                        <option value="">— Sin destino —</option>
+                        @foreach (var pos in Model.Posiciones)
+                        {
+                            <option value="@pos.Id">@pos.Texto</option>
+                        }
+                    </select>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Cantidad y motivo -->
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <span class="card-title">Detalles</span>
+            </div>
+            <div class="card-body"
+                 style="display:grid;grid-template-columns:1fr 2fr;gap:16px;">
+
+                <div>
+                    <label asp-for="Cantidad"
+                           style="font-size:.8125rem;font-weight:500;
+                                  display:block;margin-bottom:6px;">
+                        Cantidad *
+                    </label>
+                    <input asp-for="Cantidad" type="number" min="1"
+                           class="form-control" placeholder="0"
+                           style="border-radius:var(--radius);font-size:1.125rem;
+                                  font-weight:600;text-align:center;" />
+                    <span asp-validation-for="Cantidad"
+                          style="font-size:.75rem;color:var(--color-danger);"></span>
+                </div>
+
+                <div>
+                    <label asp-for="Motivo"
+                           style="font-size:.8125rem;font-weight:500;
+                                  display:block;margin-bottom:6px;">
+                        Motivo / Referencia
+                    </label>
+                    <input asp-for="Motivo" class="form-control"
+                           placeholder="Ej: Orden #1234, ajuste físico..."
+                           style="border-radius:var(--radius);" />
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Aviso -->
+        <div class="alert-app warning" style="margin-bottom:16px;">
+            <i class="bi bi-info-circle-fill"></i>
+            <span>
+                Este movimiento no podrá editarse una vez registrado.
+                Asegúrate de que los datos sean correctos.
+            </span>
+        </div>
+
+        <div style="display:flex;gap:12px;">
+            <button type="submit" class="btn-primary-app">
+                <i class="bi bi-check-lg"></i> Registrar movimiento
+            </button>
+            <a href="/Movimientos" class="btn-secondary-app">Cancelar</a>
+        </div>
+
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function onTipoChange(tipo) {
+            // Reset estilos
+            ['Entrada','Salida','Transferencia','Ajuste'].forEach(t => {
+                const el = document.getElementById('tipo_' + t);
+                if (!el) return;
+                el.style.borderColor = 'var(--color-border)';
+                el.style.background  = '';
+            });
+
+            const colors = {
+                Entrada:       ['var(--color-success)', 'var(--color-success-light)'],
+                Salida:        ['var(--color-danger)',  'var(--color-danger-light)'],
+                Transferencia: ['var(--color-info)',    'var(--color-info-light)'],
+                Ajuste:        ['var(--color-warning)', 'var(--color-warning-light)']
+            };
+
+            const el = document.getElementById('tipo_' + tipo);
+            if (el && colors[tipo]) {
+                el.style.borderColor = colors[tipo][0];
+                el.style.background  = colors[tipo][1];
+            }
+        }
+
+        // Inicializar con valor actual
+        const tipoActual = document.querySelector('input[name="Tipo"]:checked');
+        if (tipoActual) onTipoChange(tipoActual.value);
+    </script>
+}
